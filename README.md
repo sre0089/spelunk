@@ -38,6 +38,7 @@ The authoritative planning documents are:
 - `docs/VISION.md`
 - `docs/ARCHITECTURE.md`
 - `docs/DOMAIN_MODEL.md`
+- `docs/PYTHON_API.md`
 - `docs/CAPTURE_ARCHITECTURE.md`
 - `docs/CAPTURE_CONFIG.md`
 - `docs/STORAGE_FORMAT.md`
