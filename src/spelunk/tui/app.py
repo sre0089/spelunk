@@ -88,6 +88,7 @@ class SpelunkApp(App[None]):
     BINDINGS = [
         ("ctrl+p", "command_palette", "Command Palette"),
         ("?", "shortcuts", "Shortcuts"),
+        ("c", "compare_recent_run", "Compare"),
         ("i", "inspect_feature", "Inspect Feature"),
         ("r", "generate_reports", "Generate Reports"),
         ("q", "quit", "Quit"),
@@ -181,6 +182,31 @@ class SpelunkApp(App[None]):
         )
         self._refresh_loaded_run_view()
 
+    def action_compare_recent_run(self) -> None:
+        if self.session is None or self.app_state.scan_result is None:
+            return
+        target_path = _comparison_target(self.session.root, self.app_state.recent_runs)
+        if target_path is None:
+            self.app_state.report_message = "No other recent run is available to compare."
+            self.app_state.selected_mode = "compare"
+            self._refresh_loaded_run_view()
+            return
+        try:
+            target = Session.open(target_path)
+            result = self.session.compare(target)
+        except SpelunkError as error:
+            self.app_state.report_message = f"Comparison failed: {error}"
+        else:
+            self.app_state.comparison_result = result
+            self.app_state.report_message = ""
+        self.app_state.selected_mode = "compare"
+        self.app_state.breadcrumbs = (
+            "Projects",
+            str(self.app_state.scan_result.run.run_id),
+            "Compare",
+        )
+        self._refresh_loaded_run_view()
+
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if event.list_view.id != "project-actions" or self.app_state.scan_result is None:
             return
@@ -237,6 +263,7 @@ class SpelunkApp(App[None]):
             ListItem(Label("Layers"), id="layers-action"),
             ListItem(Label("Diagnostics"), id="diagnostics-action"),
             ListItem(Label("Inspect"), id="inspect-action"),
+            ListItem(Label("Compare"), id="compare-action"),
             ListItem(Label("Reports"), id="reports-action"),
             id="project-actions",
         )
@@ -299,6 +326,8 @@ def _primary_title_text(state: AppState) -> str:
         return "Diagnostics"
     if state.selected_mode == "inspect":
         return "Inspect Feature"
+    if state.selected_mode == "compare":
+        return "Compare Runs"
     if state.selected_mode == "reports":
         return "Reports"
     return f"Run {scan.run.run_id}"
@@ -314,6 +343,8 @@ def _primary_copy_text(state: AppState) -> str:
         return _diagnostic_summary_text(scan)
     if state.selected_mode == "inspect":
         return _feature_inspection_text(state)
+    if state.selected_mode == "compare":
+        return _comparison_summary_text(state)
     if state.selected_mode == "reports":
         return "\n".join(
             [
@@ -346,6 +377,8 @@ def _secondary_content_text(state: AppState) -> str:
         return _diagnostic_evidence_text(scan)
     if state.selected_mode == "inspect":
         return _feature_examples_text(state)
+    if state.selected_mode == "compare":
+        return _comparison_delta_text(state)
     if state.selected_mode == "reports":
         return state.report_message or "Reports have not been generated in this TUI session."
     return ""
@@ -361,6 +394,8 @@ def _details_text(state: AppState) -> str:
         return _statistics_summary_text(scan)
     if state.selected_mode == "inspect":
         return _feature_examples_text(state)
+    if state.selected_mode == "compare":
+        return _comparison_delta_text(state)
     if state.selected_mode == "reports":
         return state.report_message or _diagnostic_summary_text(scan)
     return _diagnostic_summary_text(scan)
@@ -435,6 +470,51 @@ def _feature_examples_text(state: AppState) -> str:
     return f"Top examples\n{examples}"
 
 
+def _comparison_target(current_root: Path, recent_runs: tuple[Path, ...]) -> Path | None:
+    current = current_root.expanduser().resolve()
+    for path in recent_runs:
+        candidate = path.expanduser().resolve()
+        if candidate != current:
+            return candidate
+    return None
+
+
+def _comparison_summary_text(state: AppState) -> str:
+    if state.report_message:
+        return state.report_message
+    result = state.comparison_result
+    if result is None:
+        return "Press `c` to compare this run with another recent run."
+    comparison = result.comparison
+    return "\n".join(
+        [
+            f"Left: {comparison.left_run_id}",
+            f"Right: {comparison.right_run_id}",
+            f"Layer matches: {len(comparison.layer_matches)}",
+            f"Metric deltas: {len(comparison.metric_deltas)}",
+            f"Diagnostics: {len(comparison.diagnostics)}",
+        ]
+    )
+
+
+def _comparison_delta_text(state: AppState) -> str:
+    if state.report_message:
+        return state.report_message
+    result = state.comparison_result
+    if result is None:
+        return "No comparison has been run yet."
+    deltas = result.comparison.metric_deltas
+    if not deltas:
+        return "No metric deltas found."
+    lines = ["Metric deltas"]
+    for delta in deltas[:8]:
+        lines.append(
+            f"- {delta.subject_id} {delta.metric}: "
+            f"{delta.left_value} -> {delta.right_value} ({delta.delta})"
+        )
+    return "\n".join(lines)
+
+
 def _mode_from_item_id(item_id: str | None) -> str | None:
     if item_id is None:
         return None
@@ -443,5 +523,6 @@ def _mode_from_item_id(item_id: str | None) -> str | None:
         "layers-action": "layers",
         "diagnostics-action": "diagnostics",
         "inspect-action": "inspect",
+        "compare-action": "compare",
         "reports-action": "reports",
     }.get(item_id)

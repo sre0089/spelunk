@@ -147,6 +147,31 @@ def test_tui_inspect_feature_action_renders_stats(
     asyncio.run(scenario())
 
 
+def test_tui_compare_action_uses_other_recent_run(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SPELUNK_CONFIG_HOME", str(tmp_path / "config"))
+    left = _run_with_activations(tmp_path / "left", array=[[1.0, 2.0], [3.0, 4.0]])
+    right = _run_with_activations(tmp_path / "right", array=[[2.0, 4.0], [6.0, 8.0]])
+    remember_recent_run(right)
+
+    async def scenario() -> None:
+        app = SpelunkApp(run_path=left)
+        async with app.run_test() as pilot:
+            await pilot.press("c")
+            await pilot.pause()
+            title = str(app.query_one("#primary-title", Static).render())
+            content = str(app.query_one("#primary-copy", Static).render())
+            details = str(app.query_one("#details-copy", Static).render())
+            assert title == "Compare Runs"
+            assert "Layer matches: 1" in content
+            assert "Metric deltas" in details
+            assert "activation_mean" in details
+
+    asyncio.run(scenario())
+
+
 def test_tui_renders_open_error(tmp_path: Path) -> None:
     async def scenario() -> None:
         app = SpelunkApp(run_path=tmp_path / "missing.spelunk")
@@ -158,7 +183,11 @@ def test_tui_renders_open_error(tmp_path: Path) -> None:
     asyncio.run(scenario())
 
 
-def _run_with_activations(tmp_path: Path) -> Path:
+def _run_with_activations(
+    tmp_path: Path,
+    *,
+    array: list[list[float]] | None = None,
+) -> Path:
     root = tmp_path / "run-001.spelunk"
     session = Session.create(
         root,
@@ -182,7 +211,7 @@ def _run_with_activations(tmp_path: Path) -> Path:
             checkpoint_id=CheckpointId("ckpt-001"),
             layer_id=LayerId("encoder"),
             sample_ids=(SampleId("sample-0"), SampleId("sample-1")),
-            array=[[0.0, 0.0], [0.0, 0.0]],
+            array=array or [[0.0, 0.0], [0.0, 0.0]],
             shape=(2, 2),
             dtype="float32",
         )
