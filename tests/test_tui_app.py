@@ -191,6 +191,7 @@ def test_tui_compare_action_uses_other_recent_run(
             assert title == "Compare Runs"
             assert "Layer matches: 1" in content
             assert "Metric deltas" in details
+            assert "Layer        Metric" in details
             assert "activation_mean" in details
 
     asyncio.run(scenario())

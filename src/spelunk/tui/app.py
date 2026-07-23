@@ -514,6 +514,8 @@ def _comparison_summary_text(state: AppState) -> str:
             f"Layer matches: {len(comparison.layer_matches)}",
             f"Metric deltas: {len(comparison.metric_deltas)}",
             f"Diagnostics: {len(comparison.diagnostics)}",
+            "",
+            _comparison_delta_table(state, limit=8),
         ]
     )
 
@@ -527,13 +529,43 @@ def _comparison_delta_text(state: AppState) -> str:
     deltas = result.comparison.metric_deltas
     if not deltas:
         return "No metric deltas found."
-    lines = ["Metric deltas"]
-    for delta in deltas[:8]:
+    return _comparison_delta_table(state, limit=10)
+
+
+def _comparison_delta_table(state: AppState, *, limit: int) -> str:
+    result = state.comparison_result
+    if result is None:
+        return "No comparison has been run yet."
+    deltas = sorted(
+        result.comparison.metric_deltas,
+        key=lambda delta: abs(delta.delta) if delta.delta is not None else 0.0,
+        reverse=True,
+    )
+    if not deltas:
+        return "No metric deltas found."
+    lines = ["Metric deltas", "Layer        Metric              Left       Right      Delta"]
+    for delta in deltas[:limit]:
         lines.append(
-            f"- {delta.subject_id} {delta.metric}: "
-            f"{delta.left_value} -> {delta.right_value} ({delta.delta})"
+            f"{_fit(delta.subject_id, 12)} "
+            f"{_fit(delta.metric, 18)} "
+            f"{_number_text(delta.left_value):>9} "
+            f"{_number_text(delta.right_value):>9} "
+            f"{_number_text(delta.delta):>9}"
         )
     return "\n".join(lines)
+
+
+def _number_text(value: object) -> str:
+    if isinstance(value, float):
+        return f"{value:.4g}"
+    return str(value)
+
+
+def _fit(value: object, width: int) -> str:
+    text = str(value)
+    if len(text) <= width:
+        return text.ljust(width)
+    return text[: width - 1] + "…"
 
 
 def _mode_from_item_id(item_id: str | None) -> str | None:
