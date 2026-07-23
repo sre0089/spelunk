@@ -28,7 +28,9 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-dependencies = []
+dependencies = [
+  "typer>=0.12",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -42,7 +44,6 @@ pytorch = [
 tui = [
   "rich>=13.7",
   "textual>=0.70",
-  "typer>=0.12",
 ]
 arrays = [
   "numpy>=1.26",
