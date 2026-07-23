@@ -212,6 +212,34 @@ def test_capture_config_executes_pytorch_capture(tmp_path: Path) -> None:
     assert scan.layers[0].activation_count == 2
 
 
+def test_capture_config_refuses_existing_run(tmp_path: Path) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("torch")
+    np.save(tmp_path / "samples.npy", np.array([[1.0, 2.0]], dtype=np.float32))
+    (tmp_path / "model_factory.py").write_text(
+        "\n".join(
+            [
+                "from collections import OrderedDict",
+                "import torch",
+                "",
+                "def build_model():",
+                "    return torch.nn.Sequential(",
+                "        OrderedDict([('encoder', torch.nn.Linear(2, 2))])",
+                "    )",
+                "",
+            ]
+        )
+    )
+    config_path = _write_capture_config(tmp_path)
+
+    first = runner.invoke(cli_app.app, ["capture", str(config_path)])
+    second = runner.invoke(cli_app.app, ["capture", str(config_path)])
+
+    assert first.exit_code == 0
+    assert second.exit_code == 1
+    assert "Capture run already exists" in second.output
+
+
 def test_capture_config_reports_missing_dataset_source(tmp_path: Path) -> None:
     model_path = tmp_path / "model_factory.py"
     model_path.write_text(

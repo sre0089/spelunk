@@ -32,6 +32,8 @@ Model fields:
 
 Use either `model.path` or `model.module`.
 
+The `run` path must not already exist. Spelunk does not overwrite or append to an existing capture run from `spelunk capture`; choose a new run path for each capture.
+
 Dataset fields:
 
 - `kind`: `numpy`, `csv`, `jsonl`, or `image-folder`

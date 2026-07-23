@@ -22,6 +22,7 @@ def run_capture_config(path: str | Path) -> CaptureResult:
     config = load_capture_config(path)
     if config.model.framework != "pytorch":
         raise UnsupportedOperationError(f"Unsupported capture framework: {config.model.framework}")
+    _ensure_new_run(config)
 
     model = _load_model(config)
     try:
@@ -79,6 +80,14 @@ def run_capture_config(path: str | Path) -> CaptureResult:
         captured_samples=summary.captured_samples,
         batch_count=summary.batch_count,
     )
+
+
+def _ensure_new_run(config: CaptureConfig) -> None:
+    if config.run.exists():
+        raise SpelunkError(
+            f"Capture run already exists: {config.run}. "
+            "Choose a new run path; overwrite is not implemented yet."
+        )
 
 
 def _load_model(config: CaptureConfig) -> Any:
