@@ -49,3 +49,27 @@ The authoritative planning documents are:
 - `CONTRIBUTING.md`
 - `DECISIONS.md`
 - `PROJECT_STATE.md`
+
+## Development
+
+Spelunk targets Python 3.11+.
+
+Install locally once dependencies are available:
+
+```bash
+python -m pip install -e ".[dev,tui,arrays]"
+```
+
+PyTorch support is optional:
+
+```bash
+python -m pip install -e ".[pytorch]"
+```
+
+Run checks:
+
+```bash
+pytest
+ruff check .
+mypy
+```
