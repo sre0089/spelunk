@@ -1,0 +1,24 @@
+{
+  "run": "runs/tiny-autoencoder.spelunk",
+  "storage_backend": "numpy-shards",
+  "model": {
+    "id": "tiny-autoencoder",
+    "name": "Tiny Autoencoder",
+    "framework": "pytorch",
+    "path": "model_factory.py",
+    "factory": "build_model"
+  },
+  "dataset": {
+    "id": "sample-vectors",
+    "name": "Sample vectors",
+    "kind": "numpy",
+    "source": "samples.npy"
+  },
+  "capture": {
+    "layers": ["encoder"],
+    "checkpoint_id": "ckpt-001",
+    "checkpoint_label": "initial",
+    "batch_size": 32,
+    "max_samples": 512
+  }
+}

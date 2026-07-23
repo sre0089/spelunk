@@ -39,6 +39,7 @@ The authoritative planning documents are:
 - `docs/ARCHITECTURE.md`
 - `docs/DOMAIN_MODEL.md`
 - `docs/CAPTURE_ARCHITECTURE.md`
+- `docs/CAPTURE_CONFIG.md`
 - `docs/STORAGE_FORMAT.md`
 - `docs/TUI_DESIGN.md`
 - `docs/TUI_COMPONENTS.md`
@@ -48,6 +49,24 @@ The authoritative planning documents are:
 - `docs/ROADMAP.md`
 - `docs/CONTRIBUTING.md`
 - `docs/DECISIONS.md`
+
+## Basic Workflow
+
+Capture activations from a config:
+
+```bash
+spelunk capture examples/capture.json
+```
+
+Inspect the resulting run:
+
+```bash
+spelunk scan runs/tiny-autoencoder.spelunk
+spelunk inspect runs/tiny-autoencoder.spelunk --layer encoder --feature 0
+spelunk report runs/tiny-autoencoder.spelunk --format markdown
+```
+
+See `docs/CAPTURE_CONFIG.md` for the model factory contract, supported dataset formats, and JSON/TOML examples.
 
 ## Development
 

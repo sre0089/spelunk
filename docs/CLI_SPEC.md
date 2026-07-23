@@ -11,9 +11,11 @@ spelunk scan RUN
 spelunk scan RUN --json
 spelunk capture CONFIG
 spelunk compare RUN_A RUN_B
+spelunk compare RUN_A RUN_B --json
 spelunk report RUN --format markdown
 spelunk report RUN --format json
 spelunk inspect RUN --layer LAYER --feature FEATURE
+spelunk inspect RUN --layer LAYER --feature FEATURE --json
 spelunk doctor
 spelunk config show
 ```
@@ -25,6 +27,10 @@ spelunk config show
 ## Output
 
 Human output should be concise and conclusion-first. Machine output uses JSON and typed schemas.
+
+## Capture Configs
+
+`spelunk capture CONFIG` accepts JSON and TOML. See `docs/CAPTURE_CONFIG.md` and the files in `examples/`.
 
 ## Rules
 
