@@ -198,6 +198,30 @@ def test_session_compare_returns_layer_matches_and_metric_deltas(tmp_path: Path)
     assert any(delta.metric == "activation_count" for delta in comparison.metric_deltas)
 
 
+def test_session_inspect_feature_returns_statistics_and_examples(tmp_path: Path) -> None:
+    session = Session.create(tmp_path / "run-001.spelunk", model=_model(), dataset=_dataset())
+    NumpyShardActivationStore(session.root / "activations").write_batch(
+        ActivationBatch(
+            run_id=session.run_id,
+            checkpoint_id=CheckpointId("ckpt-001"),
+            layer_id=LayerId("encoder"),
+            sample_ids=(SampleId("sample-0"), SampleId("sample-1")),
+            array=[[1.0, 5.0], [2.0, 9.0]],
+            shape=(2, 2),
+            dtype="float32",
+        )
+    )
+
+    result = session.inspect_feature(layer_id="encoder", feature_id="1")
+
+    assert result.feature.layer_id == "encoder"
+    assert result.feature.feature_id == "1"
+    assert result.feature.top_examples[0] == "sample-1"
+    metrics = {statistic.metric: statistic.value for statistic in result.feature.statistics}
+    assert metrics["activation_mean"] == 7.0
+    assert metrics["activation_max"] == 9.0
+
+
 def test_future_service_contracts_fail_explicitly(tmp_path: Path) -> None:
     session = Session.create(tmp_path / "run-001.spelunk", model=_model(), dataset=_dataset())
 

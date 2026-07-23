@@ -6,7 +6,16 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
-from spelunk.domain import LayerId, LayerSummary, Provenance, Statistic
+from spelunk.domain import (
+    FeatureId,
+    FeatureSummary,
+    LayerId,
+    LayerSummary,
+    Provenance,
+    SampleId,
+    Statistic,
+)
+from spelunk.errors import StorageError
 from spelunk.storage import ActivationQuery, ActivationStore
 
 
@@ -97,6 +106,91 @@ def summarize_layers(
         accumulator.summary(layer_id)
         for layer_id, accumulator in sorted(accumulators.items(), key=lambda item: item[0])
     )
+
+
+def summarize_feature(
+    store: ActivationStore,
+    *,
+    layer_id: LayerId,
+    feature_id: FeatureId,
+) -> FeatureSummary:
+    feature_index = _feature_index(feature_id)
+    np = _numpy()
+    values: list[float] = []
+    ranked_samples: list[tuple[float, str]] = []
+    for batch in store.iter_batches(ActivationQuery(layer_id=layer_id)):
+        array = np.asarray(batch.array, dtype=float)
+        if array.size == 0:
+            continue
+        feature_matrix = array.reshape((array.shape[0] if array.ndim > 0 else 1, -1))
+        if feature_index >= feature_matrix.shape[1]:
+            raise StorageError(
+                f"Feature index {feature_index} is out of range for layer '{layer_id}'"
+            )
+        column = feature_matrix[:, feature_index]
+        values.extend(float(value) for value in column.tolist())
+        ranked_samples.extend(
+            (abs(float(value)), str(sample_id))
+            for value, sample_id in zip(column.tolist(), batch.sample_ids, strict=False)
+        )
+
+    if not values:
+        raise StorageError(f"No activations found for layer '{layer_id}'")
+
+    vector = np.asarray(values, dtype=float)
+    provenance = Provenance(source="activation-store")
+    return FeatureSummary(
+        feature_id=feature_id,
+        layer_id=layer_id,
+        statistics=(
+            Statistic(
+                subject_id=str(feature_id),
+                subject_type="feature",
+                metric="activation_mean",
+                value=float(vector.mean()),
+                sample_count=int(vector.size),
+                provenance=provenance,
+            ),
+            Statistic(
+                subject_id=str(feature_id),
+                subject_type="feature",
+                metric="activation_std",
+                value=float(vector.std()),
+                sample_count=int(vector.size),
+                provenance=provenance,
+            ),
+            Statistic(
+                subject_id=str(feature_id),
+                subject_type="feature",
+                metric="activation_min",
+                value=float(vector.min()),
+                sample_count=int(vector.size),
+                provenance=provenance,
+            ),
+            Statistic(
+                subject_id=str(feature_id),
+                subject_type="feature",
+                metric="activation_max",
+                value=float(vector.max()),
+                sample_count=int(vector.size),
+                provenance=provenance,
+            ),
+        ),
+        top_examples=tuple(
+            SampleId(sample_id)
+            for _score, sample_id in sorted(ranked_samples, reverse=True)[:5]
+        ),
+    )
+
+
+def _feature_index(feature_id: FeatureId) -> int:
+    try:
+        index = int(str(feature_id))
+    except ValueError as error:
+        raise StorageError(f"Feature ID must be an integer index: {feature_id}") from error
+    if index < 0:
+        raise StorageError(f"Feature ID must be non-negative: {feature_id}")
+    return index
 
 
 def _feature_count(shape: tuple[int, ...]) -> int | None:

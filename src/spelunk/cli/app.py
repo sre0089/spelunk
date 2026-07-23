@@ -11,7 +11,12 @@ import typer
 from spelunk import __version__
 from spelunk.errors import SpelunkError
 from spelunk.services import Session, run_capture_config
-from spelunk.services.results import ComparisonResult, RunSummary, ScanResult
+from spelunk.services.results import (
+    ComparisonResult,
+    FeatureInspectionResult,
+    RunSummary,
+    ScanResult,
+)
 from spelunk.tui import run_tui
 
 app = typer.Typer(
@@ -109,12 +114,24 @@ def inspect(
     run: Path,
     layer: str = typer.Option(..., "--layer", help="Layer ID or path."),
     feature: str = typer.Option(..., "--feature", help="Feature ID or key."),
+    json_output: bool = typer.Option(False, "--json", help="Emit machine-readable JSON."),
 ) -> None:
     """Inspect a layer feature."""
-    _fail(
-        "Feature inspection is scheduled for later milestones: "
-        f"run={run}, layer={layer}, feature={feature}"
-    )
+    session = _open_session(run)
+    try:
+        result = session.inspect_feature(layer_id=layer, feature_id=feature)
+    except SpelunkError as error:
+        _fail(str(error))
+    if json_output:
+        typer.echo(json.dumps(_feature_inspection_to_json(result), indent=2, sort_keys=True))
+        return
+    typer.echo(f"Run: {result.run.run_id}")
+    typer.echo(f"Layer: {result.feature.layer_id}")
+    typer.echo(f"Feature: {result.feature.feature_id}")
+    for statistic in result.feature.statistics:
+        typer.echo(f"{statistic.metric}: {statistic.value}")
+    if result.feature.top_examples:
+        typer.echo("Top examples: " + ", ".join(str(item) for item in result.feature.top_examples))
 
 
 @app.command()
@@ -258,4 +275,21 @@ def _comparison_to_json(result: ComparisonResult) -> dict[str, object]:
             }
             for diagnostic in comparison.diagnostics
         ],
+    }
+
+
+def _feature_inspection_to_json(result: FeatureInspectionResult) -> dict[str, object]:
+    return {
+        "run_id": result.run.run_id,
+        "layer_id": result.feature.layer_id,
+        "feature_id": result.feature.feature_id,
+        "statistics": [
+            {
+                "metric": statistic.metric,
+                "value": statistic.value,
+                "sample_count": statistic.sample_count,
+            }
+            for statistic in result.feature.statistics
+        ],
+        "top_examples": list(result.feature.top_examples),
     }

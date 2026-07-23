@@ -223,6 +223,34 @@ def test_compare_json_outputs_metric_deltas(tmp_path: Path) -> None:
     assert any(delta["metric"] == "activation_mean" for delta in payload["metric_deltas"])
 
 
+def test_inspect_json_outputs_feature_statistics(tmp_path: Path) -> None:
+    run = _run(tmp_path)
+    session = Session.open(run)
+    NumpyShardActivationStore(session.root / "activations").write_batch(
+        ActivationBatch(
+            run_id=session.run_id,
+            checkpoint_id=CheckpointId("ckpt-001"),
+            layer_id=LayerId("encoder"),
+            sample_ids=(SampleId("sample-0"), SampleId("sample-1")),
+            array=[[1.0, 5.0], [2.0, 9.0]],
+            shape=(2, 2),
+            dtype="float32",
+        )
+    )
+
+    result = runner.invoke(
+        cli_app.app,
+        ["inspect", str(run), "--layer", "encoder", "--feature", "1", "--json"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["layer_id"] == "encoder"
+    assert payload["feature_id"] == "1"
+    assert payload["top_examples"][0] == "sample-1"
+    assert any(statistic["metric"] == "activation_mean" for statistic in payload["statistics"])
+
+
 def test_missing_run_exits_with_error(tmp_path: Path) -> None:
     result = runner.invoke(cli_app.app, ["scan", str(tmp_path / "missing.spelunk")])
 
@@ -235,8 +263,8 @@ def test_future_commands_fail_explicitly(tmp_path: Path) -> None:
 
     inspect = runner.invoke(
         cli_app.app,
-        ["inspect", str(run), "--layer", "encoder", "--feature", "0"],
+        ["inspect", str(run), "--layer", "encoder", "--feature", "bad"],
     )
 
     assert inspect.exit_code == 1
-    assert "Feature inspection is scheduled" in inspect.output
+    assert "Feature ID must be an integer index" in inspect.output

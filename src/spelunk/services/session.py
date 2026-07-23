@@ -5,12 +5,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from spelunk.analysis import summarize_layers
+from spelunk.analysis import summarize_feature, summarize_layers
 from spelunk.diagnostics import ActivationHealthDiagnostic, DiagnosticContext
 from spelunk.domain import (
     Checkpoint,
     DatasetRef,
+    FeatureId,
     Layer,
+    LayerId,
     LayerMatch,
     LayerSummary,
     ModelRef,
@@ -28,6 +30,7 @@ from spelunk.services.results import (
     CapturePlan,
     CaptureResult,
     ComparisonResult,
+    FeatureInspectionResult,
     ReportResult,
     RunSummary,
     ScanResult,
@@ -188,6 +191,19 @@ class Session:
             formats=frozenset({format}),
         )
         return ReportResult(report=report, format=format, content=content, path=path)
+
+    def inspect_feature(
+        self,
+        *,
+        layer_id: str,
+        feature_id: str,
+    ) -> FeatureInspectionResult:
+        summary = summarize_feature(
+            self._activation_store(),
+            layer_id=LayerId(layer_id),
+            feature_id=FeatureId(feature_id),
+        )
+        return FeatureInspectionResult(run=self.summary(), feature=summary)
 
     def _report_markdown(self, scan: ScanResult) -> str:
         summary = scan.run

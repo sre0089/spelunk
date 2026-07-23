@@ -9,6 +9,7 @@ from pathlib import Path
 from spelunk.domain import (
     DatasetRef,
     DiagnosticResult,
+    FeatureSummary,
     LayerId,
     LayerSummary,
     ModelRef,
@@ -64,6 +65,12 @@ class ReportResult:
     format: ReportFormat
     content: str
     path: Path
+
+
+@dataclass(frozen=True, slots=True)
+class FeatureInspectionResult:
+    run: RunSummary
+    feature: FeatureSummary
 
 
 @dataclass(frozen=True, slots=True)
