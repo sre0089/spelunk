@@ -1,39 +1,121 @@
 # Spelunk
 
-Spelunk is an IDE for learned representations.
+Spelunk is a terminal-native toolkit for inspecting learned representations. It captures PyTorch activations, stores them locally, computes layer and feature statistics, runs diagnostics, compares runs, and exports Markdown or JSON reports.
 
-Rather than visualizing tensors, Spelunk helps researchers understand what a model has learned through diagnostics, feature exploration, checkpoint comparison, activation statistics, and representation mapping.
+The current release target is a local-first pre-alpha for researchers who are comfortable using a Python model factory and CLI workflow.
 
-Spelunk is terminal-native. Running `spelunk` launches an interactive application, not a log-heavy command script. The CLI, TUI, Python API, and future graphical clients all use the same application-service layer.
+## Install
 
-## Vision
+From a checkout:
 
-Explore, diagnose, and explain neural representations.
+```bash
+python -m pip install -e ".[dev,arrays,datasets,tui]"
+```
 
-## Long-term goals
+Add PyTorch support when you want to capture activations:
 
-- PyTorch-first
-- Representation-agnostic (CNNs, Transformers, SAEs, CLIP, Diffusion)
-- Local-first
-- Polished terminal application
-- CLI + Python API + future desktop/web clients
-- PyPI package
-- Homebrew distribution
+```bash
+python -m pip install -e ".[pytorch]"
+```
 
-## Initial Scope
+Run checks:
 
-The first implementation targets:
+```bash
+python -m pytest
+python -m ruff check .
+python -m mypy
+```
 
-- autoencoders
-- sparse autoencoders
-- generic PyTorch modules
-- local datasets owned and loaded by Spelunk
+## Quickstart
+
+Start from the example config:
+
+```bash
+spelunk capture examples/capture.json
+```
+
+Scan the captured run:
+
+```bash
+spelunk scan runs/tiny-autoencoder.spelunk
+spelunk scan runs/tiny-autoencoder.spelunk --json
+```
+
+Inspect one feature:
+
+```bash
+spelunk inspect runs/tiny-autoencoder.spelunk --layer encoder --feature 0
+spelunk inspect runs/tiny-autoencoder.spelunk --layer encoder --feature 0 --json
+```
+
+Generate reports:
+
+```bash
+spelunk report runs/tiny-autoencoder.spelunk --format markdown
+spelunk report runs/tiny-autoencoder.spelunk --format json
+```
+
+Compare two runs:
+
+```bash
+spelunk compare runs/baseline.spelunk runs/experiment.spelunk
+spelunk compare runs/baseline.spelunk runs/experiment.spelunk --json
+```
+
+Open the TUI:
+
+```bash
+spelunk
+spelunk open runs/tiny-autoencoder.spelunk
+```
+
+## Capture Configs
+
+Capture configs are JSON or TOML files. See:
+
+- `examples/capture.json`
+- `examples/capture.toml`
+- `examples/model_factory.py`
+- `docs/CAPTURE_CONFIG.md`
+
+The model factory must be callable with no arguments and return a `torch.nn.Module`. Layer names in the capture config are PyTorch `named_modules()` paths.
+
+## Python API
+
+```python
+from spelunk import Session
+
+session = Session.open("runs/tiny-autoencoder.spelunk")
+scan = session.scan()
+feature = session.inspect_feature(layer_id="encoder", feature_id="0")
+report = session.report(format="markdown")
+```
+
+See `docs/PYTHON_API.md`.
+
+## What Works Today
+
+- JSON and TOML capture configs
+- Spelunk-owned dataset loading for NumPy, CSV, JSONL, and image folders
+- PyTorch activation capture through selected forward hooks
+- NumPy shard and Zarr activation stores
+- layer statistics
+- feature statistics and top examples
+- activation health diagnostics
+- run comparison
 - Markdown and JSON reports
-- local storage with streamable activation arrays
+- Textual TUI shell with run overview, layers, diagnostics, reports, and report generation
+
+## Current Limitations
+
+- default `spelunk` project picker is still early
+- TUI compare and feature-inspection workflows are not implemented yet
+- capture requires a local PyTorch model factory
+- model loading does not handle checkpoint files directly yet
+- no packaged PyPI release has been cut yet
+- diagnostics are intentionally limited to activation health for now
 
 ## Documentation
-
-The authoritative planning documents are:
 
 - `docs/VISION.md`
 - `docs/ARCHITECTURE.md`
@@ -51,45 +133,3 @@ The authoritative planning documents are:
 - `docs/RELEASE.md`
 - `docs/CONTRIBUTING.md`
 - `docs/DECISIONS.md`
-
-## Basic Workflow
-
-Capture activations from a config:
-
-```bash
-spelunk capture examples/capture.json
-```
-
-Inspect the resulting run:
-
-```bash
-spelunk scan runs/tiny-autoencoder.spelunk
-spelunk inspect runs/tiny-autoencoder.spelunk --layer encoder --feature 0
-spelunk report runs/tiny-autoencoder.spelunk --format markdown
-```
-
-See `docs/CAPTURE_CONFIG.md` for the model factory contract, supported dataset formats, and JSON/TOML examples.
-
-## Development
-
-Spelunk targets Python 3.11+.
-
-Install locally once dependencies are available:
-
-```bash
-python -m pip install -e ".[dev,tui,arrays]"
-```
-
-PyTorch support is optional:
-
-```bash
-python -m pip install -e ".[pytorch]"
-```
-
-Run checks:
-
-```bash
-pytest
-ruff check .
-mypy
-```
