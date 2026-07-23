@@ -1,5 +1,5 @@
 {
-  "run": "runs/tiny-autoencoder.spelunk",
+  "run": "../runs/tiny-autoencoder.spelunk",
   "storage_backend": "numpy-shards",
   "model": {
     "id": "tiny-autoencoder",

@@ -77,6 +77,7 @@ Capture configs are JSON or TOML files. See:
 - `examples/capture.toml`
 - `examples/model_factory.py`
 - `docs/CAPTURE_CONFIG.md`
+- `docs/EXAMPLE_SMOKE.md`
 
 The model factory must be callable with no arguments and return a `torch.nn.Module`. Layer names in the capture config are PyTorch `named_modules()` paths.
 
@@ -123,6 +124,7 @@ See `docs/PYTHON_API.md`.
 - `docs/PYTHON_API.md`
 - `docs/CAPTURE_ARCHITECTURE.md`
 - `docs/CAPTURE_CONFIG.md`
+- `docs/EXAMPLE_SMOKE.md`
 - `docs/STORAGE_FORMAT.md`
 - `docs/TUI_DESIGN.md`
 - `docs/TUI_COMPONENTS.md`
