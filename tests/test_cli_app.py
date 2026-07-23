@@ -174,6 +174,52 @@ def test_capture_config_executes_pytorch_capture(tmp_path: Path) -> None:
     assert scan.layers[0].activation_count == 2
 
 
+def test_capture_config_reports_missing_dataset_source(tmp_path: Path) -> None:
+    model_path = tmp_path / "model_factory.py"
+    model_path.write_text(
+        "\n".join(
+            [
+                "import torch",
+                "",
+                "def build_model():",
+                "    return torch.nn.Linear(2, 2)",
+                "",
+            ]
+        )
+    )
+    config_path = tmp_path / "capture.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "run": "run-001.spelunk",
+                "model": {
+                    "id": "model-001",
+                    "name": "Tiny Torch",
+                    "framework": "pytorch",
+                    "path": "model_factory.py",
+                    "factory": "build_model",
+                },
+                "dataset": {
+                    "id": "dataset-001",
+                    "name": "samples",
+                    "kind": "numpy",
+                    "source": "missing.npy",
+                },
+                "capture": {
+                    "layers": ["encoder"],
+                    "checkpoint_id": "ckpt-001",
+                    "checkpoint_label": "initial",
+                },
+            }
+        )
+    )
+
+    result = runner.invoke(cli_app.app, ["capture", str(config_path)])
+
+    assert result.exit_code == 1
+    assert "Dataset source does not exist" in result.output
+
+
 def test_report_json_outputs_manifest_summary(tmp_path: Path) -> None:
     run = _run(tmp_path)
 
@@ -249,6 +295,30 @@ def test_inspect_json_outputs_feature_statistics(tmp_path: Path) -> None:
     assert payload["feature_id"] == "1"
     assert payload["top_examples"][0] == "sample-1"
     assert any(statistic["metric"] == "activation_mean" for statistic in payload["statistics"])
+
+
+def test_inspect_reports_out_of_range_feature(tmp_path: Path) -> None:
+    run = _run(tmp_path)
+    session = Session.open(run)
+    NumpyShardActivationStore(session.root / "activations").write_batch(
+        ActivationBatch(
+            run_id=session.run_id,
+            checkpoint_id=CheckpointId("ckpt-001"),
+            layer_id=LayerId("encoder"),
+            sample_ids=(SampleId("sample-0"),),
+            array=[[1.0, 5.0]],
+            shape=(1, 2),
+            dtype="float32",
+        )
+    )
+
+    result = runner.invoke(
+        cli_app.app,
+        ["inspect", str(run), "--layer", "encoder", "--feature", "9"],
+    )
+
+    assert result.exit_code == 1
+    assert "Feature index 9 is out of range" in result.output
 
 
 def test_missing_run_exits_with_error(tmp_path: Path) -> None:

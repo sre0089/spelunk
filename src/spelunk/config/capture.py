@@ -65,6 +65,8 @@ def load_capture_config(path: str | Path) -> CaptureConfig:
 
 
 def _read_config(path: Path) -> Mapping[str, Any]:
+    if not path.exists():
+        raise ManifestError(f"Capture config does not exist: {path}")
     if path.suffix == ".json":
         try:
             return _mapping(json.loads(path.read_text()), "capture config")
@@ -87,23 +89,29 @@ def _model_config(data: Mapping[str, Any], base: Path) -> ModelConfig:
         raise ManifestError("Expected 'model.module' to be a string")
     if model_path is not None and not isinstance(model_path, str):
         raise ManifestError("Expected 'model.path' to be a string")
+    resolved_path = _resolve_path(model_path, base) if model_path is not None else None
+    if resolved_path is not None and not resolved_path.exists():
+        raise ManifestError(f"Model factory file does not exist: {resolved_path}")
     return ModelConfig(
         id=ModelId(_required_str(data, "id")),
         name=_required_str(data, "name"),
         framework=_required_str(data, "framework"),
         module=module,
-        path=_resolve_path(model_path, base) if model_path is not None else None,
+        path=resolved_path,
         factory=_required_str(data, "factory"),
     )
 
 
 def _dataset_config(data: Mapping[str, Any], base: Path) -> DatasetConfig:
     kind = _dataset_kind(_required_str(data, "kind"))
+    source = _resolve_path(_required_str(data, "source"), base)
+    if not source.exists():
+        raise ManifestError(f"Dataset source does not exist: {source}")
     return DatasetConfig(
         id=DatasetId(_required_str(data, "id")),
         name=_required_str(data, "name"),
         kind=kind,
-        source=_resolve_path(_required_str(data, "source"), base),
+        source=source,
     )
 
 
@@ -125,10 +133,14 @@ def _mapping(value: Any, field_name: str) -> Mapping[str, Any]:
 
 
 def _required_mapping(data: Mapping[str, Any], field_name: str) -> Mapping[str, Any]:
+    if field_name not in data:
+        raise ManifestError(f"Capture config is missing required field: {field_name}")
     return _mapping(data[field_name], field_name)
 
 
 def _required_str(data: Mapping[str, Any], field_name: str) -> str:
+    if field_name not in data:
+        raise ManifestError(f"Capture config is missing required field: {field_name}")
     value = data[field_name]
     if not isinstance(value, str) or not value:
         raise ManifestError(f"Expected '{field_name}' to be a non-empty string")

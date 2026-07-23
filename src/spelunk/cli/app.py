@@ -168,7 +168,7 @@ def _compare_or_fail(left: Session, right: Session) -> ComparisonResult:
 
 
 def _fail(message: str) -> NoReturn:
-    typer.echo(f"Error: {message}", err=True)
+    typer.echo(f"Error: {message}")
     raise typer.Exit(code=1)
 
 
