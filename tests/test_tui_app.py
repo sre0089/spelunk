@@ -123,6 +123,30 @@ def test_tui_generate_reports_action_writes_artifacts(
     assert (run / "reports" / "report.json").exists()
 
 
+def test_tui_inspect_feature_action_renders_stats(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SPELUNK_CONFIG_HOME", str(tmp_path / "config"))
+    run = _run_with_activations(tmp_path)
+
+    async def scenario() -> None:
+        app = SpelunkApp(run_path=run)
+        async with app.run_test() as pilot:
+            await pilot.press("i")
+            await pilot.pause()
+            title = str(app.query_one("#primary-title", Static).render())
+            content = str(app.query_one("#primary-copy", Static).render())
+            details = str(app.query_one("#details-copy", Static).render())
+            assert title == "Inspect Feature"
+            assert "Layer: encoder" in content
+            assert "Feature: 0" in content
+            assert "activation_mean" in content
+            assert "Top examples" in details
+
+    asyncio.run(scenario())
+
+
 def test_tui_renders_open_error(tmp_path: Path) -> None:
     async def scenario() -> None:
         app = SpelunkApp(run_path=tmp_path / "missing.spelunk")

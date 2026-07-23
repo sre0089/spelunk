@@ -88,6 +88,7 @@ class SpelunkApp(App[None]):
     BINDINGS = [
         ("ctrl+p", "command_palette", "Command Palette"),
         ("?", "shortcuts", "Shortcuts"),
+        ("i", "inspect_feature", "Inspect Feature"),
         ("r", "generate_reports", "Generate Reports"),
         ("q", "quit", "Quit"),
     ]
@@ -150,6 +151,36 @@ class SpelunkApp(App[None]):
         )
         self._refresh_loaded_run_view()
 
+    def action_inspect_feature(self) -> None:
+        if self.session is None or self.app_state.scan_result is None:
+            return
+        if not self.app_state.scan_result.layers:
+            self.app_state.report_message = "No activation layers are available to inspect."
+            self.app_state.selected_mode = "inspect"
+            self._refresh_loaded_run_view()
+            return
+        layer_id = self.app_state.selected_layer_id or self.app_state.scan_result.layers[0].layer_id
+        feature_id = self.app_state.selected_feature_id or "0"
+        try:
+            result = self.session.inspect_feature(
+                layer_id=str(layer_id),
+                feature_id=str(feature_id),
+            )
+        except SpelunkError as error:
+            self.app_state.report_message = f"Feature inspection failed: {error}"
+        else:
+            self.app_state.feature_inspection = result
+            self.app_state.selected_layer_id = result.feature.layer_id
+            self.app_state.selected_feature_id = result.feature.feature_id
+            self.app_state.report_message = ""
+        self.app_state.selected_mode = "inspect"
+        self.app_state.breadcrumbs = (
+            "Projects",
+            str(self.app_state.scan_result.run.run_id),
+            "Inspect",
+        )
+        self._refresh_loaded_run_view()
+
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if event.list_view.id != "project-actions" or self.app_state.scan_result is None:
             return
@@ -205,6 +236,7 @@ class SpelunkApp(App[None]):
             ListItem(Label("Overview"), id="overview-action"),
             ListItem(Label("Layers"), id="layers-action"),
             ListItem(Label("Diagnostics"), id="diagnostics-action"),
+            ListItem(Label("Inspect"), id="inspect-action"),
             ListItem(Label("Reports"), id="reports-action"),
             id="project-actions",
         )
@@ -265,6 +297,8 @@ def _primary_title_text(state: AppState) -> str:
         return "Layers"
     if state.selected_mode == "diagnostics":
         return "Diagnostics"
+    if state.selected_mode == "inspect":
+        return "Inspect Feature"
     if state.selected_mode == "reports":
         return "Reports"
     return f"Run {scan.run.run_id}"
@@ -278,6 +312,8 @@ def _primary_copy_text(state: AppState) -> str:
         return _layer_summary_text(scan)
     if state.selected_mode == "diagnostics":
         return _diagnostic_summary_text(scan)
+    if state.selected_mode == "inspect":
+        return _feature_inspection_text(state)
     if state.selected_mode == "reports":
         return "\n".join(
             [
@@ -308,6 +344,8 @@ def _secondary_content_text(state: AppState) -> str:
         return _statistics_summary_text(scan)
     if state.selected_mode == "diagnostics":
         return _diagnostic_evidence_text(scan)
+    if state.selected_mode == "inspect":
+        return _feature_examples_text(state)
     if state.selected_mode == "reports":
         return state.report_message or "Reports have not been generated in this TUI session."
     return ""
@@ -321,6 +359,8 @@ def _details_text(state: AppState) -> str:
         return _diagnostic_evidence_text(scan)
     if state.selected_mode == "layers":
         return _statistics_summary_text(scan)
+    if state.selected_mode == "inspect":
+        return _feature_examples_text(state)
     if state.selected_mode == "reports":
         return state.report_message or _diagnostic_summary_text(scan)
     return _diagnostic_summary_text(scan)
@@ -364,6 +404,37 @@ def _diagnostic_summary_text(scan: ScanResult) -> str:
     return "\n".join(lines)
 
 
+def _feature_inspection_text(state: AppState) -> str:
+    if state.report_message:
+        return state.report_message
+    result = state.feature_inspection
+    if result is None:
+        return "Press `i` to inspect feature 0 on the first activation layer."
+    lines = [
+        f"Layer: {result.feature.layer_id}",
+        f"Feature: {result.feature.feature_id}",
+        "Statistics",
+    ]
+    for statistic in result.feature.statistics:
+        lines.append(
+            f"- {statistic.metric}: {statistic.value:.6g} "
+            f"over {statistic.sample_count} samples"
+        )
+    return "\n".join(lines)
+
+
+def _feature_examples_text(state: AppState) -> str:
+    if state.report_message:
+        return state.report_message
+    result = state.feature_inspection
+    if result is None:
+        return "No feature inspected yet."
+    if not result.feature.top_examples:
+        return "No top examples available."
+    examples = "\n".join(f"- {sample_id}" for sample_id in result.feature.top_examples)
+    return f"Top examples\n{examples}"
+
+
 def _mode_from_item_id(item_id: str | None) -> str | None:
     if item_id is None:
         return None
@@ -371,5 +442,6 @@ def _mode_from_item_id(item_id: str | None) -> str | None:
         "overview-action": "overview",
         "layers-action": "layers",
         "diagnostics-action": "diagnostics",
+        "inspect-action": "inspect",
         "reports-action": "reports",
     }.get(item_id)

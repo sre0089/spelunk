@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from spelunk.domain import CheckpointId, FeatureId, LayerId, RunId
-from spelunk.services.results import ScanResult
+from spelunk.services.results import FeatureInspectionResult, ScanResult
 
 
 @dataclass(slots=True)
@@ -23,6 +23,7 @@ class AppState:
     search_query: str = ""
     theme: str = "spelunk-dark"
     scan_result: ScanResult | None = None
+    feature_inspection: FeatureInspectionResult | None = None
     error_message: str | None = None
     report_message: str = ""
     recent_runs: tuple[Path, ...] = ()
