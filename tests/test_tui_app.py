@@ -33,7 +33,7 @@ def test_tui_project_picker_renders_recent_runs(
     monkeypatch: MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SPELUNK_CONFIG_HOME", str(tmp_path / "config"))
-    run = tmp_path / "run-001.spelunk"
+    run = _run_with_activations(tmp_path)
     remember_recent_run(run)
 
     async def scenario() -> None:
@@ -44,6 +44,25 @@ def test_tui_project_picker_renders_recent_runs(
             titles = [str(widget.render()) for widget in app.screen.query(Label)]
             assert str(run.resolve()) in content
             assert any(str(run.resolve()) in title for title in titles)
+
+    asyncio.run(scenario())
+
+
+def test_tui_project_picker_prunes_stale_recent_runs(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SPELUNK_CONFIG_HOME", str(tmp_path / "config"))
+    stale = tmp_path / "missing.spelunk"
+    remember_recent_run(stale)
+
+    async def scenario() -> None:
+        app = SpelunkApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            content = str(app.query_one("#primary-copy", Static).render())
+            assert "Open a run with `spelunk open RUN`" in content
+            assert str(stale.resolve()) not in content
 
     asyncio.run(scenario())
 
@@ -168,6 +187,26 @@ def test_tui_compare_action_uses_other_recent_run(
             assert "Layer matches: 1" in content
             assert "Metric deltas" in details
             assert "activation_mean" in details
+
+    asyncio.run(scenario())
+
+
+def test_tui_compare_ignores_stale_recent_run(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SPELUNK_CONFIG_HOME", str(tmp_path / "config"))
+    run = _run_with_activations(tmp_path)
+    remember_recent_run(tmp_path / "deleted.spelunk")
+
+    async def scenario() -> None:
+        app = SpelunkApp(run_path=run)
+        async with app.run_test() as pilot:
+            await pilot.press("c")
+            await pilot.pause()
+            content = str(app.query_one("#primary-copy", Static).render())
+            assert "No other recent run is available to compare" in content
+            assert "Comparison failed" not in content
 
     asyncio.run(scenario())
 

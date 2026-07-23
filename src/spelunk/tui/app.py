@@ -8,7 +8,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Footer, Header, Label, ListItem, ListView, Static
 
-from spelunk.config import load_recent_runs, remember_recent_run
+from spelunk.config import is_valid_run_path, prune_stale_recent_runs, remember_recent_run
 from spelunk.errors import SpelunkError
 from spelunk.services import Session
 from spelunk.services.results import ScanResult
@@ -104,7 +104,7 @@ class SpelunkApp(App[None]):
         self.app_state = state or AppState()
         self.session: Session | None = None
         if state is None:
-            self.app_state.recent_runs = load_recent_runs()
+            self.app_state.recent_runs = prune_stale_recent_runs()
         if run_path is not None:
             self._load_run(run_path)
         self.breadcrumbs = Breadcrumbs()
@@ -240,7 +240,7 @@ class SpelunkApp(App[None]):
             self.app_state.breadcrumbs = ("Projects", "Open failed")
             return
         remember_recent_run(self.session.root)
-        self.app_state.recent_runs = load_recent_runs()
+        self.app_state.recent_runs = prune_stale_recent_runs()
         self._apply_scan_result(scan_result)
 
     def _apply_scan_result(self, scan_result: ScanResult) -> None:
@@ -474,7 +474,7 @@ def _comparison_target(current_root: Path, recent_runs: tuple[Path, ...]) -> Pat
     current = current_root.expanduser().resolve()
     for path in recent_runs:
         candidate = path.expanduser().resolve()
-        if candidate != current:
+        if candidate != current and is_valid_run_path(candidate):
             return candidate
     return None
 

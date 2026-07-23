@@ -10,6 +10,7 @@ from typing import Any
 from spelunk.errors import ManifestError
 
 DEFAULT_LIMIT = 10
+MANIFEST_FILENAME = "manifest.json"
 
 
 def recent_runs_path() -> Path:
@@ -37,6 +38,31 @@ def load_recent_runs(path: Path | None = None) -> tuple[Path, ...]:
         if isinstance(item, str) and item:
             runs.append(Path(item))
     return tuple(runs)
+
+
+def load_valid_recent_runs(path: Path | None = None) -> tuple[Path, ...]:
+    """Load recent runs that still point at readable Spelunk manifests."""
+    return tuple(run for run in load_recent_runs(path) if is_valid_run_path(run))
+
+
+def prune_stale_recent_runs(path: Path | None = None) -> tuple[Path, ...]:
+    """Remove missing or invalid recent runs from storage and return the valid paths."""
+    storage_path = path or recent_runs_path()
+    valid_runs = load_valid_recent_runs(storage_path)
+    if storage_path.exists():
+        try:
+            storage_path.write_text(json.dumps([str(item) for item in valid_runs], indent=2) + "\n")
+        except OSError:
+            return valid_runs
+    return valid_runs
+
+
+def is_valid_run_path(run: str | Path) -> bool:
+    run_path = Path(run).expanduser()
+    manifest_path = run_path / MANIFEST_FILENAME if run_path.suffix == ".spelunk" else run_path
+    if run_path.is_dir():
+        manifest_path = run_path / MANIFEST_FILENAME
+    return manifest_path.exists() and manifest_path.is_file()
 
 
 def remember_recent_run(
