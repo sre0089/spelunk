@@ -13,7 +13,7 @@ from spelunk.domain import (
     ModelId,
     ModelRef,
 )
-from spelunk.errors import SchemaVersionError
+from spelunk.errors import ManifestError, SchemaVersionError
 from spelunk.storage import (
     CURRENT_SCHEMA_VERSION,
     RunManifest,
@@ -85,3 +85,52 @@ def test_manifest_rejects_unknown_schema_version() -> None:
 
     with pytest.raises(SchemaVersionError):
         from_json(payload)
+
+
+def test_manifest_rejects_missing_required_field() -> None:
+    payload = to_json(_manifest())
+    del payload["model"]["name"]
+
+    with pytest.raises(ManifestError, match="missing required field"):
+        from_json(payload)
+
+
+def test_manifest_rejects_unknown_storage_backend() -> None:
+    payload = to_json(_manifest())
+    payload["storage"]["kind"] = "sqlite"
+
+    with pytest.raises(ManifestError, match="Unknown storage backend"):
+        from_json(payload)
+
+
+def test_manifest_accepts_zarr_storage_backend() -> None:
+    payload = to_json(_manifest())
+    payload["storage"]["kind"] = "zarr"
+
+    restored = from_json(payload)
+
+    assert restored.storage.kind == "zarr"
+
+
+def test_manifest_rejects_invalid_shape() -> None:
+    payload = to_json(_manifest())
+    payload["layers"][0]["shape"] = [16, -1]
+
+    with pytest.raises(ManifestError, match="non-negative"):
+        from_json(payload)
+
+
+def test_manifest_rejects_invalid_checkpoint_step() -> None:
+    payload = to_json(_manifest())
+    payload["checkpoints"][0]["step"] = "100"
+
+    with pytest.raises(ManifestError, match="integer or null"):
+        from_json(payload)
+
+
+def test_read_manifest_rejects_invalid_json(tmp_path: Path) -> None:
+    path = tmp_path / "manifest.json"
+    path.write_text("{not-json")
+
+    with pytest.raises(ManifestError, match="not valid JSON"):
+        read_manifest(path)

@@ -10,3 +10,6 @@ class SpelunkError(Exception):
 class SchemaVersionError(SpelunkError):
     """Raised when a stored schema version cannot be read safely."""
 
+
+class ManifestError(SpelunkError):
+    """Raised when a stored manifest is malformed."""
