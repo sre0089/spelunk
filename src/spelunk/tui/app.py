@@ -458,12 +458,14 @@ def _feature_inspection_text(state: AppState) -> str:
     lines = [
         f"Layer: {result.feature.layer_id}",
         f"Feature: {result.feature.feature_id}",
-        "Statistics",
+        "",
+        "Metric              Value      Samples",
     ]
     for statistic in result.feature.statistics:
         lines.append(
-            f"- {statistic.metric}: {statistic.value:.6g} "
-            f"over {statistic.sample_count} samples"
+            f"{_fit(statistic.metric, 18)} "
+            f"{_number_text(statistic.value):>10} "
+            f"{statistic.sample_count:>8}"
         )
     return "\n".join(lines)
 
@@ -476,8 +478,10 @@ def _feature_examples_text(state: AppState) -> str:
         return "No feature inspected yet."
     if not result.feature.top_examples:
         return "No top examples available."
-    examples = "\n".join(f"- {sample_id}" for sample_id in result.feature.top_examples)
-    return f"Top examples\n{examples}"
+    lines = ["Top examples", "Rank  Sample"]
+    for index, sample_id in enumerate(result.feature.top_examples, start=1):
+        lines.append(f"{index:>4}  {sample_id}")
+    return "\n".join(lines)
 
 
 def _comparison_target(current_root: Path, recent_runs: tuple[Path, ...]) -> Path | None:

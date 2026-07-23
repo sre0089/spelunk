@@ -165,8 +165,10 @@ def test_tui_inspect_feature_action_renders_stats(
             assert title == "Inspect Feature"
             assert "Layer: encoder" in content
             assert "Feature: 0" in content
+            assert "Metric              Value" in content
             assert "activation_mean" in content
             assert "Top examples" in details
+            assert "Rank  Sample" in details
 
     asyncio.run(scenario())
 
