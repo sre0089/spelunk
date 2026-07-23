@@ -42,6 +42,10 @@ Reports export to Markdown and JSON.
 
 An API layer remains in scope. Early work starts with an in-process Python API; REST/RPC can be added after service contracts stabilize.
 
+### Pre-release compatibility
+
+Before `0.1.0`, Python APIs may change without backward compatibility guarantees. Storage schemas must still be versioned, and incompatible changes must be recorded in this file or migration notes.
+
 ## Architecture Decision Records
 
 ### ADR-001: Keep domain independent from UI and frameworks
@@ -64,4 +68,4 @@ Reason: representation datasets can exceed memory.
 
 ## Open
 
-- What compatibility policy should apply before the first PyPI release?
+No open architecture decisions are currently blocking M2.
