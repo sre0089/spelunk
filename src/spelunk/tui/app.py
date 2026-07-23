@@ -124,6 +124,25 @@ class SpelunkApp(App[None]):
     def action_shortcuts(self) -> None:
         self.push_screen(ShortcutOverlayScreen())
 
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        if event.list_view.id != "project-actions" or self.app_state.scan_result is None:
+            return
+        selected_mode = _mode_from_item_id(event.item.id)
+        if selected_mode is None:
+            return
+        self.app_state.selected_mode = selected_mode
+        self.app_state.breadcrumbs = (
+            "Projects",
+            str(self.app_state.scan_result.run.run_id),
+            selected_mode.title(),
+        )
+        self.breadcrumbs.update_state(self.app_state)
+        self.status.update_state(self.app_state)
+        self.query_one("#primary-title", Static).update(_primary_title_text(self.app_state))
+        self.query_one("#primary-copy", Static).update(_primary_copy_text(self.app_state))
+        self.query_one("#layer-summary", Static).update(_secondary_content_text(self.app_state))
+        self.query_one("#details-copy", Static).update(_details_text(self.app_state))
+
     def _load_run(self, run_path: str | Path) -> None:
         try:
             scan_result = Session.open(run_path).scan()
@@ -137,8 +156,8 @@ class SpelunkApp(App[None]):
     def _apply_scan_result(self, scan_result: ScanResult) -> None:
         self.app_state.scan_result = scan_result
         self.app_state.current_run_id = scan_result.run.run_id
-        self.app_state.selected_mode = "scan"
-        self.app_state.breadcrumbs = ("Projects", str(scan_result.run.run_id), "Scan")
+        self.app_state.selected_mode = "overview"
+        self.app_state.breadcrumbs = ("Projects", str(scan_result.run.run_id), "Overview")
 
     def _navigation(self) -> ListView:
         if self.app_state.scan_result is None:
@@ -150,20 +169,20 @@ class SpelunkApp(App[None]):
                 id="project-actions",
             )
         return ListView(
-            ListItem(Label("Overview")),
-            ListItem(Label("Layers")),
-            ListItem(Label("Diagnostics")),
-            ListItem(Label("Reports")),
+            ListItem(Label("Overview"), id="overview-action"),
+            ListItem(Label("Layers"), id="layers-action"),
+            ListItem(Label("Diagnostics"), id="diagnostics-action"),
+            ListItem(Label("Reports"), id="reports-action"),
             id="project-actions",
         )
 
     def _content(self) -> ComposeResult:
         if self.app_state.error_message is not None:
-            yield Static("Project Picker", classes="panel-title")
+            yield Static("Project Picker", classes="panel-title", id="primary-title")
             yield Static(f"Could not open run: {self.app_state.error_message}", id="primary-copy")
             return
         if self.app_state.scan_result is None:
-            yield Static("Project Picker", classes="panel-title")
+            yield Static("Project Picker", classes="panel-title", id="primary-title")
             yield Static(
                 "Select a run or create a capture plan. "
                 "Backend services are ready for manifest-backed runs.",
@@ -171,29 +190,13 @@ class SpelunkApp(App[None]):
             )
             return
 
-        scan = self.app_state.scan_result
-        yield Static(f"Run {scan.run.run_id}", classes="panel-title")
-        yield Static(
-            "\n".join(
-                [
-                    f"Model: {scan.run.model.name}",
-                    f"Architecture: {scan.run.model.architecture_family}",
-                    f"Dataset: {scan.run.dataset.name}",
-                    f"Storage: {scan.run.storage_backend}",
-                    f"Layers with activations: {len(scan.layers)}",
-                    f"Diagnostics: {len(scan.diagnostics)}",
-                ]
-            ),
-            id="primary-copy",
-        )
-        yield Static(_layer_summary_text(scan), id="layer-summary")
+        yield Static(_primary_title_text(self.app_state), classes="panel-title", id="primary-title")
+        yield Static(_primary_copy_text(self.app_state), id="primary-copy")
+        yield Static(_secondary_content_text(self.app_state), id="layer-summary")
 
     def _details(self) -> ComposeResult:
         yield Static("Details", classes="panel-title")
-        if self.app_state.scan_result is None:
-            yield Static("No run selected.", id="details-copy")
-            return
-        yield Static(_diagnostic_summary_text(self.app_state.scan_result), id="details-copy")
+        yield Static(_details_text(self.app_state), id="details-copy")
 
 
 def run_tui(run_path: str | Path | None = None) -> None:
@@ -213,6 +216,102 @@ def _layer_summary_text(scan: ScanResult) -> str:
     return "\n".join(lines)
 
 
+def _primary_title_text(state: AppState) -> str:
+    scan = state.scan_result
+    if scan is None:
+        return "Project Picker"
+    if state.selected_mode == "layers":
+        return "Layers"
+    if state.selected_mode == "diagnostics":
+        return "Diagnostics"
+    if state.selected_mode == "reports":
+        return "Reports"
+    return f"Run {scan.run.run_id}"
+
+
+def _primary_copy_text(state: AppState) -> str:
+    scan = state.scan_result
+    if scan is None:
+        return "No run selected."
+    if state.selected_mode == "layers":
+        return _layer_summary_text(scan)
+    if state.selected_mode == "diagnostics":
+        return _diagnostic_summary_text(scan)
+    if state.selected_mode == "reports":
+        return "\n".join(
+            [
+                "Available exports",
+                "- Markdown: narrative scan report",
+                "- JSON: machine-readable scan report",
+            ]
+        )
+    return "\n".join(
+        [
+            f"Model: {scan.run.model.name}",
+            f"Architecture: {scan.run.model.architecture_family}",
+            f"Dataset: {scan.run.dataset.name}",
+            f"Storage: {scan.run.storage_backend}",
+            f"Layers with activations: {len(scan.layers)}",
+            f"Diagnostics: {len(scan.diagnostics)}",
+        ]
+    )
+
+
+def _secondary_content_text(state: AppState) -> str:
+    scan = state.scan_result
+    if scan is None:
+        return ""
+    if state.selected_mode == "overview":
+        return _layer_summary_text(scan)
+    if state.selected_mode == "layers":
+        return _statistics_summary_text(scan)
+    if state.selected_mode == "diagnostics":
+        return _diagnostic_evidence_text(scan)
+    if state.selected_mode == "reports":
+        return "Run `spelunk report RUN --format markdown` or `--format json`."
+    return ""
+
+
+def _details_text(state: AppState) -> str:
+    scan = state.scan_result
+    if scan is None:
+        return "No run selected."
+    if state.selected_mode == "diagnostics":
+        return _diagnostic_evidence_text(scan)
+    if state.selected_mode == "layers":
+        return _statistics_summary_text(scan)
+    return _diagnostic_summary_text(scan)
+
+
+def _statistics_summary_text(scan: ScanResult) -> str:
+    if not scan.layers:
+        return "No layer statistics available."
+    lines = ["Statistics"]
+    for summary in scan.layers:
+        if not summary.statistics:
+            lines.append(f"- {summary.layer_id}: no statistics")
+            continue
+        for statistic in summary.statistics:
+            lines.append(
+                f"- {summary.layer_id} {statistic.metric}: "
+                f"{statistic.value:.6g} over {statistic.sample_count} samples"
+            )
+    return "\n".join(lines)
+
+
+def _diagnostic_evidence_text(scan: ScanResult) -> str:
+    if not scan.diagnostics:
+        return "No diagnostic evidence available."
+    lines = ["Evidence"]
+    for diagnostic in scan.diagnostics:
+        if not diagnostic.evidence:
+            lines.append(f"- {diagnostic.id}: no evidence")
+            continue
+        for item in diagnostic.evidence:
+            lines.append(f"- {diagnostic.id} {item.label}: {item.value}")
+    return "\n".join(lines)
+
+
 def _diagnostic_summary_text(scan: ScanResult) -> str:
     if not scan.diagnostics:
         return "No diagnostics available."
@@ -220,3 +319,14 @@ def _diagnostic_summary_text(scan: ScanResult) -> str:
     for diagnostic in scan.diagnostics:
         lines.append(f"- {diagnostic.severity.upper()}: {diagnostic.conclusion}")
     return "\n".join(lines)
+
+
+def _mode_from_item_id(item_id: str | None) -> str | None:
+    if item_id is None:
+        return None
+    return {
+        "overview-action": "overview",
+        "layers-action": "layers",
+        "diagnostics-action": "diagnostics",
+        "reports-action": "reports",
+    }.get(item_id)
