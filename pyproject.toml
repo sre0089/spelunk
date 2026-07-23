@@ -43,6 +43,10 @@ dev = [
 pytorch = [
   "torch>=2.2",
 ]
+datasets = [
+  "numpy>=1.26",
+  "pillow>=10",
+]
 tui = []
 arrays = [
   "numpy>=1.26",
