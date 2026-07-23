@@ -48,6 +48,7 @@ The authoritative planning documents are:
 - `docs/CLI_SPEC.md`
 - `docs/TESTING_STRATEGY.md`
 - `docs/ROADMAP.md`
+- `docs/RELEASE.md`
 - `docs/CONTRIBUTING.md`
 - `docs/DECISIONS.md`
 
