@@ -35,20 +35,19 @@ The first implementation targets:
 
 The authoritative planning documents are:
 
-- `VISION.md`
-- `ARCHITECTURE.md`
-- `DOMAIN_MODEL.md`
-- `CAPTURE_ARCHITECTURE.md`
-- `STORAGE_FORMAT.md`
-- `TUI_DESIGN.md`
-- `TUI_COMPONENTS.md`
-- `DESIGN_LANGUAGE.md`
-- `CLI_SPEC.md`
-- `TESTING_STRATEGY.md`
-- `ROADMAP.md`
-- `CONTRIBUTING.md`
-- `DECISIONS.md`
-- `PROJECT_STATE.md`
+- `docs/VISION.md`
+- `docs/ARCHITECTURE.md`
+- `docs/DOMAIN_MODEL.md`
+- `docs/CAPTURE_ARCHITECTURE.md`
+- `docs/STORAGE_FORMAT.md`
+- `docs/TUI_DESIGN.md`
+- `docs/TUI_COMPONENTS.md`
+- `docs/DESIGN_LANGUAGE.md`
+- `docs/CLI_SPEC.md`
+- `docs/TESTING_STRATEGY.md`
+- `docs/ROADMAP.md`
+- `docs/CONTRIBUTING.md`
+- `docs/DECISIONS.md`
 
 ## Development
 

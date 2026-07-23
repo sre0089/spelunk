@@ -10,7 +10,7 @@ Spelunk is planned as a long-term software product, not a notebook or demo.
 - Keep CLI and TUI logic thin.
 - Use application services for product workflows.
 - Every milestone must include tests and documentation.
-- Do not initialize or modify git remotes until the project owner provides the repository link.
+- Coordinate remote and release changes with the project owner.
 
 ## Quality Bar
 
