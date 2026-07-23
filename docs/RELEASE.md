@@ -43,6 +43,8 @@ spelunk --version
 spelunk doctor
 ```
 
+See `docs/CLEAN_INSTALL.md` for the latest verified clean-install commands and expected output.
+
 Optional extras:
 
 ```bash

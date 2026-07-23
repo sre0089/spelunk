@@ -133,5 +133,6 @@ See `docs/PYTHON_API.md`.
 - `docs/TESTING_STRATEGY.md`
 - `docs/ROADMAP.md`
 - `docs/RELEASE.md`
+- `docs/CLEAN_INSTALL.md`
 - `docs/CONTRIBUTING.md`
 - `docs/DECISIONS.md`
