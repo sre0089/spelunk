@@ -230,8 +230,6 @@ def _storage_from_json(data: Mapping[str, Any]) -> StorageBackendSpec:
 
 def _shape_from_json(data: Mapping[str, Any], field_name: str) -> tuple[int, ...]:
     shape = _required_sequence(data, field_name)
-    if not shape:
-        raise ManifestError("Expected 'shape' to contain at least one dimension")
     dimensions: list[int] = []
     for dimension in shape:
         if isinstance(dimension, bool) or not isinstance(dimension, int):

@@ -112,6 +112,16 @@ def test_manifest_accepts_zarr_storage_backend() -> None:
     assert restored.storage.kind == "zarr"
 
 
+def test_manifest_accepts_empty_layer_shape_for_non_parameter_modules() -> None:
+    payload = to_json(_manifest())
+    payload["layers"][0]["kind"] = "ReLU"
+    payload["layers"][0]["shape"] = []
+
+    restored = from_json(payload)
+
+    assert restored.layers[0].shape == ()
+
+
 def test_manifest_rejects_invalid_shape() -> None:
     payload = to_json(_manifest())
     payload["layers"][0]["shape"] = [16, -1]
