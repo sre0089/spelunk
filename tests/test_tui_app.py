@@ -134,8 +134,13 @@ def test_tui_generate_reports_action_writes_artifacts(
         async with app.run_test() as pilot:
             await pilot.press("r")
             await pilot.pause()
+            content = str(app.query_one("#primary-copy", Static).render())
             details = str(app.query_one("#details-copy", Static).render())
+            assert "# Spelunk report for run-001" in content
+            assert "## Diagnostics" in content
             assert "Generated report.md and report.json" in details
+            assert "Markdown:" in details
+            assert "JSON:" in details
 
     asyncio.run(scenario())
     assert (run / "reports" / "report.md").exists()

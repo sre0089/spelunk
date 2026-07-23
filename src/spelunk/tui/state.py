@@ -27,4 +27,7 @@ class AppState:
     feature_inspection: FeatureInspectionResult | None = None
     error_message: str | None = None
     report_message: str = ""
+    report_markdown: str = ""
+    report_markdown_path: Path | None = None
+    report_json_path: Path | None = None
     recent_runs: tuple[Path, ...] = ()

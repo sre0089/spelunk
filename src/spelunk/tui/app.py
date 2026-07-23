@@ -140,10 +140,16 @@ class SpelunkApp(App[None]):
             json_report = self.session.report(format="json")
         except SpelunkError as error:
             self.app_state.report_message = f"Report generation failed: {error}"
+            self.app_state.report_markdown = ""
+            self.app_state.report_markdown_path = None
+            self.app_state.report_json_path = None
         else:
             self.app_state.report_message = (
                 f"Generated {markdown.path.name} and {json_report.path.name}"
             )
+            self.app_state.report_markdown = markdown.content
+            self.app_state.report_markdown_path = markdown.path
+            self.app_state.report_json_path = json_report.path
         self.app_state.selected_mode = "reports"
         self.app_state.breadcrumbs = (
             "Projects",
@@ -346,6 +352,8 @@ def _primary_copy_text(state: AppState) -> str:
     if state.selected_mode == "compare":
         return _comparison_summary_text(state)
     if state.selected_mode == "reports":
+        if state.report_markdown:
+            return state.report_markdown
         return "\n".join(
             [
                 "Available exports",
@@ -380,7 +388,7 @@ def _secondary_content_text(state: AppState) -> str:
     if state.selected_mode == "compare":
         return _comparison_delta_text(state)
     if state.selected_mode == "reports":
-        return state.report_message or "Reports have not been generated in this TUI session."
+        return _report_details_text(state)
     return ""
 
 
@@ -397,7 +405,9 @@ def _details_text(state: AppState) -> str:
     if state.selected_mode == "compare":
         return _comparison_delta_text(state)
     if state.selected_mode == "reports":
-        return state.report_message or _diagnostic_summary_text(scan)
+        if state.report_message:
+            return _report_details_text(state)
+        return _diagnostic_summary_text(scan)
     return _diagnostic_summary_text(scan)
 
 
@@ -477,6 +487,17 @@ def _comparison_target(current_root: Path, recent_runs: tuple[Path, ...]) -> Pat
         if candidate != current and is_valid_run_path(candidate):
             return candidate
     return None
+
+
+def _report_details_text(state: AppState) -> str:
+    if not state.report_message:
+        return "Reports have not been generated in this TUI session."
+    lines = [state.report_message]
+    if state.report_markdown_path is not None:
+        lines.append(f"Markdown: {state.report_markdown_path}")
+    if state.report_json_path is not None:
+        lines.append(f"JSON: {state.report_json_path}")
+    return "\n".join(lines)
 
 
 def _comparison_summary_text(state: AppState) -> str:
