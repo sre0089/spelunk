@@ -72,6 +72,22 @@ def test_tui_navigation_switches_loaded_run_views(tmp_path: Path) -> None:
     asyncio.run(scenario())
 
 
+def test_tui_generate_reports_action_writes_artifacts(tmp_path: Path) -> None:
+    run = _run_with_activations(tmp_path)
+
+    async def scenario() -> None:
+        app = SpelunkApp(run_path=run)
+        async with app.run_test() as pilot:
+            await pilot.press("r")
+            await pilot.pause()
+            details = str(app.query_one("#details-copy", Static).render())
+            assert "Generated report.md and report.json" in details
+
+    asyncio.run(scenario())
+    assert (run / "reports" / "report.md").exists()
+    assert (run / "reports" / "report.json").exists()
+
+
 def test_tui_renders_open_error(tmp_path: Path) -> None:
     async def scenario() -> None:
         app = SpelunkApp(run_path=tmp_path / "missing.spelunk")

@@ -8,6 +8,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Footer, Header, Label, ListItem, ListView, Static
 
+from spelunk.errors import SpelunkError
 from spelunk.services import Session
 from spelunk.services.results import ScanResult
 from spelunk.tui.screens import CommandPaletteScreen, ShortcutOverlayScreen
@@ -86,6 +87,7 @@ class SpelunkApp(App[None]):
     BINDINGS = [
         ("ctrl+p", "command_palette", "Command Palette"),
         ("?", "shortcuts", "Shortcuts"),
+        ("r", "generate_reports", "Generate Reports"),
         ("q", "quit", "Quit"),
     ]
 
@@ -97,6 +99,7 @@ class SpelunkApp(App[None]):
     ) -> None:
         super().__init__()
         self.app_state = state or AppState()
+        self.session: Session | None = None
         if run_path is not None:
             self._load_run(run_path)
         self.breadcrumbs = Breadcrumbs()
@@ -124,6 +127,26 @@ class SpelunkApp(App[None]):
     def action_shortcuts(self) -> None:
         self.push_screen(ShortcutOverlayScreen())
 
+    def action_generate_reports(self) -> None:
+        if self.session is None or self.app_state.scan_result is None:
+            return
+        try:
+            markdown = self.session.report(format="markdown")
+            json_report = self.session.report(format="json")
+        except SpelunkError as error:
+            self.app_state.report_message = f"Report generation failed: {error}"
+        else:
+            self.app_state.report_message = (
+                f"Generated {markdown.path.name} and {json_report.path.name}"
+            )
+        self.app_state.selected_mode = "reports"
+        self.app_state.breadcrumbs = (
+            "Projects",
+            str(self.app_state.scan_result.run.run_id),
+            "Reports",
+        )
+        self._refresh_loaded_run_view()
+
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if event.list_view.id != "project-actions" or self.app_state.scan_result is None:
             return
@@ -136,6 +159,9 @@ class SpelunkApp(App[None]):
             str(self.app_state.scan_result.run.run_id),
             selected_mode.title(),
         )
+        self._refresh_loaded_run_view()
+
+    def _refresh_loaded_run_view(self) -> None:
         self.breadcrumbs.update_state(self.app_state)
         self.status.update_state(self.app_state)
         self.query_one("#primary-title", Static).update(_primary_title_text(self.app_state))
@@ -145,8 +171,10 @@ class SpelunkApp(App[None]):
 
     def _load_run(self, run_path: str | Path) -> None:
         try:
-            scan_result = Session.open(run_path).scan()
+            self.session = Session.open(run_path)
+            scan_result = self.session.scan()
         except Exception as error:  # noqa: BLE001
+            self.session = None
             self.app_state.error_message = str(error)
             self.app_state.selected_mode = "project"
             self.app_state.breadcrumbs = ("Projects", "Open failed")
@@ -268,7 +296,7 @@ def _secondary_content_text(state: AppState) -> str:
     if state.selected_mode == "diagnostics":
         return _diagnostic_evidence_text(scan)
     if state.selected_mode == "reports":
-        return "Run `spelunk report RUN --format markdown` or `--format json`."
+        return state.report_message or "Reports have not been generated in this TUI session."
     return ""
 
 
@@ -280,6 +308,8 @@ def _details_text(state: AppState) -> str:
         return _diagnostic_evidence_text(scan)
     if state.selected_mode == "layers":
         return _statistics_summary_text(scan)
+    if state.selected_mode == "reports":
+        return state.report_message or _diagnostic_summary_text(scan)
     return _diagnostic_summary_text(scan)
 
 

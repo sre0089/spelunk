@@ -23,3 +23,4 @@ class AppState:
     theme: str = "spelunk-dark"
     scan_result: ScanResult | None = None
     error_message: str | None = None
+    report_message: str = ""
