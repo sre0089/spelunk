@@ -3,8 +3,19 @@ from pathlib import Path
 import pytest
 
 from spelunk import CapturePlan, Session
-from spelunk.domain import Checkpoint, CheckpointId, DatasetId, DatasetRef, ModelId, ModelRef
+from spelunk.capture import ActivationBatch
+from spelunk.domain import (
+    Checkpoint,
+    CheckpointId,
+    DatasetId,
+    DatasetRef,
+    LayerId,
+    ModelId,
+    ModelRef,
+    SampleId,
+)
 from spelunk.errors import StorageError, UnsupportedOperationError
+from spelunk.storage import NumpyShardActivationStore
 
 
 def _model() -> ModelRef:
@@ -70,6 +81,30 @@ def test_session_scan_returns_manifest_backed_summary(tmp_path: Path) -> None:
     assert result.run.dataset.kind == "numpy"
     assert result.layers == ()
     assert result.diagnostics == ()
+
+
+def test_session_scan_returns_stored_layer_summaries_and_diagnostics(tmp_path: Path) -> None:
+    session = Session.create(tmp_path / "run-001.spelunk", model=_model(), dataset=_dataset())
+    store = NumpyShardActivationStore(session.root / "activations")
+    store.write_batch(
+        ActivationBatch(
+            run_id=session.run_id,
+            checkpoint_id=CheckpointId("ckpt-001"),
+            layer_id=LayerId("encoder"),
+            sample_ids=(SampleId("sample-0"), SampleId("sample-1")),
+            array=[[0.0, 0.0], [0.0, 0.0]],
+            shape=(2, 2),
+            dtype="float32",
+        )
+    )
+
+    result = session.scan()
+
+    assert len(result.layers) == 1
+    assert result.layers[0].layer_id == "encoder"
+    assert len(result.diagnostics) == 1
+    assert result.diagnostics[0].severity == "critical"
+    assert "inactive" in result.diagnostics[0].conclusion
 
 
 def test_session_report_returns_markdown_summary(tmp_path: Path) -> None:

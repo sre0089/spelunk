@@ -170,6 +170,36 @@ def _scan_to_json(result: ScanResult) -> dict[str, object]:
             "layer_count": result.run.layer_count,
             "storage_backend": result.run.storage_backend,
         },
-        "layers": [],
-        "diagnostics": [],
+        "layers": [
+            {
+                "id": summary.layer_id,
+                "activation_count": summary.activation_count,
+                "feature_count": summary.feature_count,
+                "statistics": [
+                    {
+                        "metric": statistic.metric,
+                        "value": statistic.value,
+                        "sample_count": statistic.sample_count,
+                    }
+                    for statistic in summary.statistics
+                ],
+            }
+            for summary in result.layers
+        ],
+        "diagnostics": [
+            {
+                "id": diagnostic.id,
+                "name": diagnostic.name,
+                "subject_id": diagnostic.subject_id,
+                "subject_type": diagnostic.subject_type,
+                "severity": diagnostic.severity,
+                "conclusion": diagnostic.conclusion,
+                "explanation": diagnostic.explanation,
+                "evidence": [
+                    {"label": item.label, "value": item.value}
+                    for item in diagnostic.evidence
+                ],
+            }
+            for diagnostic in result.diagnostics
+        ],
     }

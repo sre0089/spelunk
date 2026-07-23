@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from spelunk.analysis import summarize_layers
+from spelunk.diagnostics import ActivationHealthDiagnostic, DiagnosticContext
 from spelunk.domain import (
     Checkpoint,
     DatasetRef,
@@ -25,9 +27,12 @@ from spelunk.services.results import (
     ScanResult,
 )
 from spelunk.storage import (
+    ActivationStore,
+    NumpyShardActivationStore,
     RunManifest,
     StorageBackend,
     StorageBackendSpec,
+    ZarrActivationStore,
     read_manifest,
     write_manifest,
 )
@@ -101,8 +106,19 @@ class Session:
             layer_count=len(self._manifest.layers),
         )
 
+    def _activation_store(self) -> ActivationStore:
+        root = _store_root(self._root, self._manifest)
+        if self._manifest.storage.kind == "numpy-shards":
+            return NumpyShardActivationStore(root)
+        if self._manifest.storage.kind == "zarr":
+            return ZarrActivationStore(root)
+        raise StorageError(f"Unsupported activation storage backend: {self._manifest.storage.kind}")
+
     def scan(self) -> ScanResult:
-        return ScanResult(run=self.summary())
+        store = self._activation_store()
+        layers = summarize_layers(store)
+        diagnostics = ActivationHealthDiagnostic().run(DiagnosticContext(store=store))
+        return ScanResult(run=self.summary(), layers=layers, diagnostics=diagnostics)
 
     def capture(self, plan: CapturePlan) -> CaptureResult:
         raise UnsupportedOperationError(
@@ -178,3 +194,7 @@ def _manifest_path(location: Path) -> Path:
     if location.is_dir() or location.suffix == ".spelunk":
         return location / MANIFEST_FILENAME
     return location
+
+
+def _store_root(root: Path, manifest: RunManifest) -> Path:
+    return root / manifest.storage.root

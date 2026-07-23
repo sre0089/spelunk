@@ -5,8 +5,10 @@ from pytest import MonkeyPatch
 from typer.testing import CliRunner
 
 import spelunk.cli.app as cli_app
-from spelunk.domain import DatasetId, DatasetRef, ModelId, ModelRef
+from spelunk.capture import ActivationBatch
+from spelunk.domain import CheckpointId, DatasetId, DatasetRef, LayerId, ModelId, ModelRef, SampleId
 from spelunk.services import Session
+from spelunk.storage import NumpyShardActivationStore
 
 runner = CliRunner()
 
@@ -78,6 +80,31 @@ def test_scan_json_uses_session_service(tmp_path: Path) -> None:
     assert payload["run"]["id"] == "run-001"
     assert payload["run"]["model"]["framework"] == "pytorch"
     assert payload["diagnostics"] == []
+
+
+def test_scan_json_includes_diagnostics(tmp_path: Path) -> None:
+    run = _run(tmp_path)
+    session = Session.open(run)
+    store = NumpyShardActivationStore(session.root / "activations")
+    store.write_batch(
+        ActivationBatch(
+            run_id=session.run_id,
+            checkpoint_id=CheckpointId("ckpt-001"),
+            layer_id=LayerId("encoder"),
+            sample_ids=(SampleId("sample-0"),),
+            array=[[0.0, 0.0]],
+            shape=(1, 2),
+            dtype="float32",
+        )
+    )
+
+    result = runner.invoke(cli_app.app, ["scan", str(run), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["layers"][0]["id"] == "encoder"
+    assert payload["diagnostics"][0]["severity"] == "critical"
+    assert "inactive" in payload["diagnostics"][0]["conclusion"]
 
 
 def test_report_json_outputs_manifest_summary(tmp_path: Path) -> None:
