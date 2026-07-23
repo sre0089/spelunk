@@ -20,11 +20,14 @@ from spelunk.services.session import Session
 def run_capture_config(path: str | Path) -> CaptureResult:
     """Execute a local capture configuration file."""
     config = load_capture_config(path)
-    model = _load_model(config)
     if config.model.framework != "pytorch":
         raise UnsupportedOperationError(f"Unsupported capture framework: {config.model.framework}")
 
-    adapter = PyTorchAdapter(model, model_id=str(config.model.id), name=config.model.name)
+    model = _load_model(config)
+    try:
+        adapter = PyTorchAdapter(model, model_id=str(config.model.id), name=config.model.name)
+    except TypeError as error:
+        raise SpelunkError(f"Model factory did not return a PyTorch module: {error}") from error
     description = adapter.describe_model()
     dataset_ref = DatasetRef(
         id=config.dataset.id,
@@ -52,18 +55,23 @@ def run_capture_config(path: str | Path) -> CaptureResult:
             source=config.dataset.source,
         )
     )
-    summary = adapter.run_capture(
-        CaptureRequest(
-            run_id=session.run_id,
-            checkpoint_id=config.capture.checkpoint_id,
-            layers=config.capture.layers,
-            batch_size=config.capture.batch_size,
-            max_samples=config.capture.max_samples,
-        ),
-        loader.iter_samples(),
-        sink=session.activation_sink(),
-        input_converter=_tensor_input_converter,
-    )
+    try:
+        summary = adapter.run_capture(
+            CaptureRequest(
+                run_id=session.run_id,
+                checkpoint_id=config.capture.checkpoint_id,
+                layers=config.capture.layers,
+                batch_size=config.capture.batch_size,
+                max_samples=config.capture.max_samples,
+            ),
+            loader.iter_samples(),
+            sink=session.activation_sink(),
+            input_converter=_tensor_input_converter,
+        )
+    except (RuntimeError, TypeError, ValueError) as error:
+        raise SpelunkError(f"Capture failed: {error}") from error
+    if summary.captured_samples == 0:
+        raise SpelunkError("Capture dataset produced no samples.")
     return CaptureResult(
         run=session.summary(),
         checkpoint_id=str(summary.checkpoint_id),

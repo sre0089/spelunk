@@ -39,6 +39,41 @@ def _run(tmp_path: Path) -> Path:
     return root
 
 
+def _write_capture_config(
+    tmp_path: Path,
+    *,
+    framework: str = "pytorch",
+    layers: list[str] | None = None,
+) -> Path:
+    config_path = tmp_path / "capture.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "run": "run-001.spelunk",
+                "model": {
+                    "id": "model-001",
+                    "name": "Tiny Torch",
+                    "framework": framework,
+                    "path": "model_factory.py",
+                    "factory": "build_model",
+                },
+                "dataset": {
+                    "id": "dataset-001",
+                    "name": "samples",
+                    "kind": "numpy",
+                    "source": "samples.npy",
+                },
+                "capture": {
+                    "layers": layers or ["encoder"],
+                    "checkpoint_id": "ckpt-001",
+                    "checkpoint_label": "initial",
+                },
+            }
+        )
+    )
+    return config_path
+
+
 def test_default_command_launches_tui(monkeypatch: MonkeyPatch) -> None:
     launched = False
 
@@ -221,6 +256,90 @@ def test_capture_config_reports_missing_dataset_source(tmp_path: Path) -> None:
 
     assert result.exit_code == 1
     assert "Dataset source does not exist" in result.output
+
+
+def test_capture_config_reports_malformed_json(tmp_path: Path) -> None:
+    config_path = tmp_path / "capture.json"
+    config_path.write_text("{not-json")
+
+    result = runner.invoke(cli_app.app, ["capture", str(config_path)])
+
+    assert result.exit_code == 1
+    assert "Capture config is not valid JSON" in result.output
+
+
+def test_capture_config_reports_unsupported_framework(tmp_path: Path) -> None:
+    np = pytest.importorskip("numpy")
+    np.save(tmp_path / "samples.npy", np.array([[1.0, 2.0]], dtype=np.float32))
+    (tmp_path / "model_factory.py").write_text("def build_model():\n    return object()\n")
+    config_path = _write_capture_config(tmp_path, framework="jax")
+
+    result = runner.invoke(cli_app.app, ["capture", str(config_path)])
+
+    assert result.exit_code == 1
+    assert "Unsupported capture framework: jax" in result.output
+
+
+def test_capture_config_reports_bad_model_factory_return(tmp_path: Path) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("torch")
+    np.save(tmp_path / "samples.npy", np.array([[1.0, 2.0]], dtype=np.float32))
+    (tmp_path / "model_factory.py").write_text("def build_model():\n    return object()\n")
+    config_path = _write_capture_config(tmp_path)
+
+    result = runner.invoke(cli_app.app, ["capture", str(config_path)])
+
+    assert result.exit_code == 1
+    assert "Model factory did not return a PyTorch module" in result.output
+
+
+def test_capture_config_reports_unknown_layer(tmp_path: Path) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("torch")
+    np.save(tmp_path / "samples.npy", np.array([[1.0, 2.0]], dtype=np.float32))
+    (tmp_path / "model_factory.py").write_text(
+        "\n".join(
+            [
+                "import torch",
+                "",
+                "def build_model():",
+                "    return torch.nn.Sequential(torch.nn.Linear(2, 2))",
+                "",
+            ]
+        )
+    )
+    config_path = _write_capture_config(tmp_path, layers=["encoder"])
+
+    result = runner.invoke(cli_app.app, ["capture", str(config_path)])
+
+    assert result.exit_code == 1
+    assert "Unknown PyTorch layer selector" in result.output
+
+
+def test_capture_config_reports_empty_dataset(tmp_path: Path) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("torch")
+    np.save(tmp_path / "samples.npy", np.empty((0, 2), dtype=np.float32))
+    (tmp_path / "model_factory.py").write_text(
+        "\n".join(
+            [
+                "from collections import OrderedDict",
+                "import torch",
+                "",
+                "def build_model():",
+                "    return torch.nn.Sequential(",
+                "        OrderedDict([('encoder', torch.nn.Linear(2, 2))])",
+                "    )",
+                "",
+            ]
+        )
+    )
+    config_path = _write_capture_config(tmp_path)
+
+    result = runner.invoke(cli_app.app, ["capture", str(config_path)])
+
+    assert result.exit_code == 1
+    assert "Capture dataset produced no samples" in result.output
 
 
 def test_report_json_outputs_manifest_summary(tmp_path: Path) -> None:
