@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -67,6 +68,11 @@ class InMemoryActivationSink:
     def write_batch(self, batch: ActivationBatch) -> None:
         self.batches.append(batch)
 
+    def iter_batches(self, query: object | None = None) -> Iterator[ActivationBatch]:
+        for batch in self.batches:
+            if query is None or _matches_query(batch, query):
+                yield batch
+
 
 class InMemoryProgressSink:
     """Simple progress sink for tests and early TUI wiring."""
@@ -77,3 +83,15 @@ class InMemoryProgressSink:
     def emit(self, progress: CaptureProgress) -> None:
         self.events.append(progress)
 
+
+def _matches_query(batch: ActivationBatch, query: object) -> bool:
+    run_id = getattr(query, "run_id", None)
+    checkpoint_id = getattr(query, "checkpoint_id", None)
+    layer_id = getattr(query, "layer_id", None)
+    if run_id is not None and batch.run_id != run_id:
+        return False
+    if checkpoint_id is not None and batch.checkpoint_id != checkpoint_id:
+        return False
+    if layer_id is not None and batch.layer_id != layer_id:
+        return False
+    return True
