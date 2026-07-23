@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Footer, Header, Label, ListItem, ListView, Static
 
+from spelunk.services import Session
+from spelunk.services.results import ScanResult
 from spelunk.tui.screens import CommandPaletteScreen, ShortcutOverlayScreen
 from spelunk.tui.state import AppState
 from spelunk.tui.widgets import Breadcrumbs, StatusBar
@@ -85,9 +89,16 @@ class SpelunkApp(App[None]):
         ("q", "quit", "Quit"),
     ]
 
-    def __init__(self, state: AppState | None = None) -> None:
+    def __init__(
+        self,
+        state: AppState | None = None,
+        *,
+        run_path: str | Path | None = None,
+    ) -> None:
         super().__init__()
         self.app_state = state or AppState()
+        if run_path is not None:
+            self._load_run(run_path)
         self.breadcrumbs = Breadcrumbs()
         self.status = StatusBar()
 
@@ -98,23 +109,11 @@ class SpelunkApp(App[None]):
         with Horizontal(id="shell"):
             with Vertical(id="nav"):
                 yield Static("Spelunk", classes="brand")
-                yield ListView(
-                    ListItem(Label("Recent runs")),
-                    ListItem(Label("Create capture run")),
-                    ListItem(Label("Open run directory")),
-                    ListItem(Label("Settings")),
-                    id="project-actions",
-                )
+                yield self._navigation()
             with Vertical(id="content"):
-                yield Static("Project Picker", classes="panel-title")
-                yield Static(
-                    "Select a run or create a capture plan. "
-                    "Backend services are ready for manifest-backed runs.",
-                    id="primary-copy",
-                )
+                yield from self._content()
             with Vertical(id="details"):
-                yield Static("Details", classes="panel-title")
-                yield Static("No run selected.")
+                yield from self._details()
         self.status.update_state(self.app_state)
         yield self.status
         yield Footer()
@@ -125,7 +124,99 @@ class SpelunkApp(App[None]):
     def action_shortcuts(self) -> None:
         self.push_screen(ShortcutOverlayScreen())
 
+    def _load_run(self, run_path: str | Path) -> None:
+        try:
+            scan_result = Session.open(run_path).scan()
+        except Exception as error:  # noqa: BLE001
+            self.app_state.error_message = str(error)
+            self.app_state.selected_mode = "project"
+            self.app_state.breadcrumbs = ("Projects", "Open failed")
+            return
+        self._apply_scan_result(scan_result)
 
-def run_tui() -> None:
+    def _apply_scan_result(self, scan_result: ScanResult) -> None:
+        self.app_state.scan_result = scan_result
+        self.app_state.current_run_id = scan_result.run.run_id
+        self.app_state.selected_mode = "scan"
+        self.app_state.breadcrumbs = ("Projects", str(scan_result.run.run_id), "Scan")
+
+    def _navigation(self) -> ListView:
+        if self.app_state.scan_result is None:
+            return ListView(
+                ListItem(Label("Recent runs")),
+                ListItem(Label("Create capture run")),
+                ListItem(Label("Open run directory")),
+                ListItem(Label("Settings")),
+                id="project-actions",
+            )
+        return ListView(
+            ListItem(Label("Overview")),
+            ListItem(Label("Layers")),
+            ListItem(Label("Diagnostics")),
+            ListItem(Label("Reports")),
+            id="project-actions",
+        )
+
+    def _content(self) -> ComposeResult:
+        if self.app_state.error_message is not None:
+            yield Static("Project Picker", classes="panel-title")
+            yield Static(f"Could not open run: {self.app_state.error_message}", id="primary-copy")
+            return
+        if self.app_state.scan_result is None:
+            yield Static("Project Picker", classes="panel-title")
+            yield Static(
+                "Select a run or create a capture plan. "
+                "Backend services are ready for manifest-backed runs.",
+                id="primary-copy",
+            )
+            return
+
+        scan = self.app_state.scan_result
+        yield Static(f"Run {scan.run.run_id}", classes="panel-title")
+        yield Static(
+            "\n".join(
+                [
+                    f"Model: {scan.run.model.name}",
+                    f"Architecture: {scan.run.model.architecture_family}",
+                    f"Dataset: {scan.run.dataset.name}",
+                    f"Storage: {scan.run.storage_backend}",
+                    f"Layers with activations: {len(scan.layers)}",
+                    f"Diagnostics: {len(scan.diagnostics)}",
+                ]
+            ),
+            id="primary-copy",
+        )
+        yield Static(_layer_summary_text(scan), id="layer-summary")
+
+    def _details(self) -> ComposeResult:
+        yield Static("Details", classes="panel-title")
+        if self.app_state.scan_result is None:
+            yield Static("No run selected.", id="details-copy")
+            return
+        yield Static(_diagnostic_summary_text(self.app_state.scan_result), id="details-copy")
+
+
+def run_tui(run_path: str | Path | None = None) -> None:
     """Launch the Spelunk TUI."""
-    SpelunkApp().run()
+    SpelunkApp(run_path=run_path).run()
+
+
+def _layer_summary_text(scan: ScanResult) -> str:
+    if not scan.layers:
+        return "No stored activation layers yet."
+    lines = ["Layers"]
+    for summary in scan.layers:
+        lines.append(
+            f"- {summary.layer_id}: activations={summary.activation_count}, "
+            f"features={summary.feature_count}"
+        )
+    return "\n".join(lines)
+
+
+def _diagnostic_summary_text(scan: ScanResult) -> str:
+    if not scan.diagnostics:
+        return "No diagnostics available."
+    lines = ["Diagnostics"]
+    for diagnostic in scan.diagnostics:
+        lines.append(f"- {diagnostic.severity.upper()}: {diagnostic.conclusion}")
+    return "\n".join(lines)

@@ -40,9 +40,8 @@ def root(
 
 @app.command()
 def open(run: Path) -> None:
-    """Open a run and print its summary."""
-    session = _open_session(run)
-    _echo_summary(session.summary())
+    """Open a run in the terminal application."""
+    run_tui(run)
 
 
 @app.command()

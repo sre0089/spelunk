@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from spelunk.domain import CheckpointId, FeatureId, LayerId, RunId
+from spelunk.services.results import ScanResult
 
 
 @dataclass(slots=True)
@@ -20,4 +21,5 @@ class AppState:
     filters: tuple[str, ...] = ()
     search_query: str = ""
     theme: str = "spelunk-dark"
-
+    scan_result: ScanResult | None = None
+    error_message: str | None = None

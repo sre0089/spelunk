@@ -60,14 +60,20 @@ def test_doctor_reports_basic_status() -> None:
     assert "Python package: importable" in result.output
 
 
-def test_open_prints_run_summary(tmp_path: Path) -> None:
+def test_open_launches_tui_for_run(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     run = _run(tmp_path)
+    launched: list[Path] = []
+
+    def fake_run_tui(run_path: Path | None = None) -> None:
+        if run_path is not None:
+            launched.append(run_path)
+
+    monkeypatch.setattr(cli_app, "run_tui", fake_run_tui)
 
     result = runner.invoke(cli_app.app, ["open", str(run)])
 
     assert result.exit_code == 0
-    assert "Run: run-001" in result.output
-    assert "Model: Tiny AE" in result.output
+    assert launched == [run]
 
 
 def test_scan_json_uses_session_service(tmp_path: Path) -> None:
