@@ -140,13 +140,17 @@ class Session:
         )
 
     def report(self, *, format: ReportFormat = "markdown") -> ReportResult:
+        scan = self.scan()
         if format == "markdown":
-            content = self._report_markdown()
+            content = self._report_markdown(scan)
+            path = self._root / "reports" / "report.md"
         elif format == "json":
-            content = self._report_json()
+            content = self._report_json(scan)
+            path = self._root / "reports" / "report.json"
         else:
             raise UnsupportedOperationError(f"Unsupported report format: {format}")
 
+        path.write_text(content)
         report = Report(
             id=ReportId(f"{self.run_id}-summary"),
             run_id=self.run_id,
@@ -154,26 +158,69 @@ class Session:
             sections=(ReportSection(title="Run Summary", body=content),),
             formats=frozenset({format}),
         )
-        return ReportResult(report=report, format=format, content=content)
+        return ReportResult(report=report, format=format, content=content, path=path)
 
-    def _report_markdown(self) -> str:
-        summary = self.summary()
-        return "\n".join(
-            [
-                f"# Spelunk summary for {summary.run_id}",
-                "",
-                f"- Model: {summary.model.name}",
-                f"- Architecture: {summary.model.architecture_family}",
-                f"- Framework: {summary.model.framework}",
-                f"- Dataset: {summary.dataset.name}",
-                f"- Checkpoints: {summary.checkpoint_count}",
-                f"- Layers: {summary.layer_count}",
-                "",
-            ]
-        )
+    def _report_markdown(self, scan: ScanResult) -> str:
+        summary = scan.run
+        lines = [
+            f"# Spelunk report for {summary.run_id}",
+            "",
+            "## Run",
+            "",
+            f"- Model: {summary.model.name}",
+            f"- Architecture: {summary.model.architecture_family}",
+            f"- Framework: {summary.model.framework}",
+            f"- Dataset: {summary.dataset.name}",
+            f"- Storage: {summary.storage_backend}",
+            f"- Checkpoints: {summary.checkpoint_count}",
+            f"- Manifest layers: {summary.layer_count}",
+            f"- Activation layers: {len(scan.layers)}",
+            f"- Diagnostics: {len(scan.diagnostics)}",
+            "",
+            "## Layers",
+            "",
+        ]
+        if not scan.layers:
+            lines.extend(["No stored activation layers.", ""])
+        for layer in scan.layers:
+            lines.extend(
+                [
+                    f"### {layer.layer_id}",
+                    "",
+                    f"- Activations: {layer.activation_count}",
+                    f"- Features: {layer.feature_count}",
+                ]
+            )
+            for statistic in layer.statistics:
+                lines.append(
+                    f"- {statistic.metric}: {statistic.value:.6g} "
+                    f"({statistic.sample_count} samples)"
+                )
+            lines.append("")
 
-    def _report_json(self) -> str:
-        summary = self.summary()
+        lines.extend(["## Diagnostics", ""])
+        if not scan.diagnostics:
+            lines.extend(["No diagnostics available.", ""])
+        for diagnostic in scan.diagnostics:
+            lines.extend(
+                [
+                    f"### {diagnostic.name}",
+                    "",
+                    f"- Severity: {diagnostic.severity.upper()}",
+                    f"- Subject: {diagnostic.subject_type} `{diagnostic.subject_id}`",
+                    f"- Conclusion: {diagnostic.conclusion}",
+                    f"- Explanation: {diagnostic.explanation}",
+                ]
+            )
+            if diagnostic.evidence:
+                lines.append("- Evidence:")
+                for item in diagnostic.evidence:
+                    lines.append(f"  - {item.label}: {item.value}")
+            lines.append("")
+        return "\n".join(lines)
+
+    def _report_json(self, scan: ScanResult) -> str:
+        summary = scan.run
         return json.dumps(
             {
                 "run_id": summary.run_id,
@@ -191,10 +238,43 @@ class Session:
                 },
                 "checkpoint_count": summary.checkpoint_count,
                 "layer_count": summary.layer_count,
+                "activation_layer_count": len(scan.layers),
+                "layers": [
+                    {
+                        "id": layer.layer_id,
+                        "activation_count": layer.activation_count,
+                        "feature_count": layer.feature_count,
+                        "statistics": [
+                            {
+                                "metric": statistic.metric,
+                                "value": statistic.value,
+                                "sample_count": statistic.sample_count,
+                            }
+                            for statistic in layer.statistics
+                        ],
+                    }
+                    for layer in scan.layers
+                ],
+                "diagnostics": [
+                    {
+                        "id": diagnostic.id,
+                        "name": diagnostic.name,
+                        "subject_id": diagnostic.subject_id,
+                        "subject_type": diagnostic.subject_type,
+                        "severity": diagnostic.severity,
+                        "conclusion": diagnostic.conclusion,
+                        "explanation": diagnostic.explanation,
+                        "evidence": [
+                            {"label": item.label, "value": item.value}
+                            for item in diagnostic.evidence
+                        ],
+                    }
+                    for diagnostic in scan.diagnostics
+                ],
             },
             indent=2,
             sort_keys=True,
-        )
+        ) + "\n"
 
 
 def _manifest_path(location: Path) -> Path:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 
 from spelunk.domain import (
     DatasetRef,
@@ -62,6 +63,7 @@ class ReportResult:
     report: Report
     format: ReportFormat
     content: str
+    path: Path
 
 
 @dataclass(frozen=True, slots=True)

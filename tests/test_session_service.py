@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -113,8 +114,11 @@ def test_session_report_returns_markdown_summary(tmp_path: Path) -> None:
     result = session.report(format="markdown")
 
     assert result.format == "markdown"
-    assert "# Spelunk summary for run-001" in result.content
+    assert result.path == session.root / "reports" / "report.md"
+    assert result.path.read_text() == result.content
+    assert "# Spelunk report for run-001" in result.content
     assert "- Model: Tiny AE" in result.content
+    assert "No stored activation layers." in result.content
 
 
 def test_session_report_returns_json_summary(tmp_path: Path) -> None:
@@ -123,8 +127,39 @@ def test_session_report_returns_json_summary(tmp_path: Path) -> None:
     result = session.report(format="json")
 
     assert result.format == "json"
+    assert result.path == session.root / "reports" / "report.json"
+    assert result.path.read_text() == result.content
     assert '"run_id": "run-001"' in result.content
     assert '"framework": "pytorch"' in result.content
+    assert '"layers": []' in result.content
+
+
+def test_session_report_includes_scan_evidence(tmp_path: Path) -> None:
+    session = Session.create(tmp_path / "run-001.spelunk", model=_model(), dataset=_dataset())
+    store = NumpyShardActivationStore(session.root / "activations")
+    store.write_batch(
+        ActivationBatch(
+            run_id=session.run_id,
+            checkpoint_id=CheckpointId("ckpt-001"),
+            layer_id=LayerId("encoder"),
+            sample_ids=(SampleId("sample-0"), SampleId("sample-1")),
+            array=[[0.0, 0.0], [0.0, 0.0]],
+            shape=(2, 2),
+            dtype="float32",
+        )
+    )
+
+    markdown = session.report(format="markdown")
+    json_report = session.report(format="json")
+    payload = json.loads(json_report.content)
+
+    assert "### encoder" in markdown.content
+    assert "- Severity: CRITICAL" in markdown.content
+    assert "inactive" in markdown.content
+    assert payload["layers"][0]["id"] == "encoder"
+    assert payload["layers"][0]["activation_count"] == 2
+    assert payload["diagnostics"][0]["severity"] == "critical"
+    assert "inactive" in payload["diagnostics"][0]["conclusion"]
 
 
 def test_future_service_contracts_fail_explicitly(tmp_path: Path) -> None:
