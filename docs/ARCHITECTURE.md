@@ -49,16 +49,17 @@ src/spelunk/
 
 ```python
 from spelunk import CapturePlan, Session
-from spelunk.adapters.pytorch import PyTorchAdapter
 
 session = Session.open("runs/run-001")
 scan = session.scan()
 report = session.report(format="markdown")
 
-adapter = PyTorchAdapter(model)
-plan = CapturePlan(layers=["encoder.*"], dataset="mnist-sample")
-run = Session.create("runs/run-002").capture(adapter, plan)
+session = Session.create("runs/run-002", model=model_ref, dataset=dataset_ref)
+plan = CapturePlan(layers=("encoder.*",), dataset="mnist-sample")
+capture = session.capture(plan)
 ```
+
+PyTorch adapters are introduced behind the capture boundary in later milestones.
 
 ## Local API Layer
 
