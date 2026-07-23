@@ -11,12 +11,17 @@ from spelunk.domain import (
     Checkpoint,
     DatasetRef,
     Layer,
+    LayerMatch,
+    LayerSummary,
     ModelRef,
     Report,
     ReportFormat,
     ReportId,
     ReportSection,
+    RunComparison,
     RunId,
+    Statistic,
+    StatisticDelta,
 )
 from spelunk.errors import StorageError, UnsupportedOperationError
 from spelunk.services.results import (
@@ -134,9 +139,33 @@ class Session:
         )
 
     def compare(self, other: Session) -> ComparisonResult:
-        raise UnsupportedOperationError(
-            f"Run comparison is not implemented yet for '{self.run_id}' and '{other.run_id}'. "
-            "See M11 in docs/ROADMAP.md."
+        left = self.scan()
+        right = other.scan()
+        left_layers = {summary.layer_id: summary for summary in left.layers}
+        right_layers = {summary.layer_id: summary for summary in right.layers}
+        shared_layer_ids = sorted(left_layers.keys() & right_layers.keys())
+        layer_matches = tuple(
+            LayerMatch(left_layer_id=layer_id, right_layer_id=layer_id, confidence=1.0)
+            for layer_id in shared_layer_ids
+        )
+        metric_deltas = tuple(
+            delta
+            for layer_id in shared_layer_ids
+            for delta in _layer_metric_deltas(left_layers[layer_id], right_layers[layer_id])
+        )
+        diagnostics = tuple(
+            diagnostic
+            for diagnostic in (*left.diagnostics, *right.diagnostics)
+            if diagnostic.severity in ("warning", "critical")
+        )
+        return ComparisonResult(
+            comparison=RunComparison(
+                left_run_id=left.run.run_id,
+                right_run_id=right.run.run_id,
+                layer_matches=layer_matches,
+                metric_deltas=metric_deltas,
+                diagnostics=diagnostics,
+            )
         )
 
     def report(self, *, format: ReportFormat = "markdown") -> ReportResult:
@@ -285,3 +314,59 @@ def _manifest_path(location: Path) -> Path:
 
 def _store_root(root: Path, manifest: RunManifest) -> Path:
     return root / manifest.storage.root
+
+
+def _layer_metric_deltas(
+    left: LayerSummary,
+    right: LayerSummary,
+) -> tuple[StatisticDelta, ...]:
+    right_statistics = {
+        statistic.metric: statistic
+        for statistic in right.statistics
+        if isinstance(statistic.value, int | float)
+    }
+    deltas: list[StatisticDelta] = []
+    for left_statistic in left.statistics:
+        right_statistic = right_statistics.get(left_statistic.metric)
+        if right_statistic is None or not isinstance(left_statistic.value, int | float):
+            continue
+        deltas.append(_statistic_delta(left_statistic, right_statistic))
+    if left.activation_count != right.activation_count:
+        deltas.append(
+            StatisticDelta(
+                subject_id=str(left.layer_id),
+                metric="activation_count",
+                left_value=left.activation_count,
+                right_value=right.activation_count,
+                delta=float(right.activation_count - left.activation_count),
+            )
+        )
+    if left.feature_count != right.feature_count:
+        deltas.append(
+            StatisticDelta(
+                subject_id=str(left.layer_id),
+                metric="feature_count",
+                left_value=left.feature_count if left.feature_count is not None else "unknown",
+                right_value=right.feature_count if right.feature_count is not None else "unknown",
+                delta=_optional_number_delta(left.feature_count, right.feature_count),
+            )
+        )
+    return tuple(deltas)
+
+
+def _statistic_delta(left: Statistic, right: Statistic) -> StatisticDelta:
+    left_value = float(left.value)
+    right_value = float(right.value)
+    return StatisticDelta(
+        subject_id=left.subject_id,
+        metric=left.metric,
+        left_value=left.value,
+        right_value=right.value,
+        delta=right_value - left_value,
+    )
+
+
+def _optional_number_delta(left: int | None, right: int | None) -> float | None:
+    if left is None or right is None:
+        return None
+    return float(right - left)

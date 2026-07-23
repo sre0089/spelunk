@@ -185,6 +185,44 @@ def test_report_json_outputs_manifest_summary(tmp_path: Path) -> None:
     assert payload["model"]["name"] == "Tiny AE"
 
 
+def test_compare_json_outputs_metric_deltas(tmp_path: Path) -> None:
+    left = _run(tmp_path / "left")
+    right = _run(tmp_path / "right")
+    left_session = Session.open(left)
+    right_session = Session.open(right)
+    NumpyShardActivationStore(left_session.root / "activations").write_batch(
+        ActivationBatch(
+            run_id=left_session.run_id,
+            checkpoint_id=CheckpointId("ckpt-001"),
+            layer_id=LayerId("encoder"),
+            sample_ids=(SampleId("sample-0"),),
+            array=[[1.0, 2.0]],
+            shape=(1, 2),
+            dtype="float32",
+        )
+    )
+    NumpyShardActivationStore(right_session.root / "activations").write_batch(
+        ActivationBatch(
+            run_id=right_session.run_id,
+            checkpoint_id=CheckpointId("ckpt-001"),
+            layer_id=LayerId("encoder"),
+            sample_ids=(SampleId("sample-0"), SampleId("sample-1")),
+            array=[[2.0, 4.0], [6.0, 8.0]],
+            shape=(2, 2),
+            dtype="float32",
+        )
+    )
+
+    result = runner.invoke(cli_app.app, ["compare", str(left), str(right), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["left_run_id"] == "run-001"
+    assert payload["right_run_id"] == "run-001"
+    assert payload["layer_matches"][0]["left_layer_id"] == "encoder"
+    assert any(delta["metric"] == "activation_mean" for delta in payload["metric_deltas"])
+
+
 def test_missing_run_exits_with_error(tmp_path: Path) -> None:
     result = runner.invoke(cli_app.app, ["scan", str(tmp_path / "missing.spelunk")])
 
@@ -195,13 +233,10 @@ def test_missing_run_exits_with_error(tmp_path: Path) -> None:
 def test_future_commands_fail_explicitly(tmp_path: Path) -> None:
     run = _run(tmp_path)
 
-    compare = runner.invoke(cli_app.app, ["compare", str(run), str(run)])
     inspect = runner.invoke(
         cli_app.app,
         ["inspect", str(run), "--layer", "encoder", "--feature", "0"],
     )
 
-    assert compare.exit_code == 1
-    assert "Run comparison is not implemented" in compare.output
     assert inspect.exit_code == 1
     assert "Feature inspection is scheduled" in inspect.output

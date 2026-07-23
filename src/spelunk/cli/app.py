@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
 from pathlib import Path
 from typing import Literal, NoReturn, cast
 
@@ -12,7 +11,7 @@ import typer
 from spelunk import __version__
 from spelunk.errors import SpelunkError
 from spelunk.services import Session, run_capture_config
-from spelunk.services.results import RunSummary, ScanResult
+from spelunk.services.results import ComparisonResult, RunSummary, ScanResult
 from spelunk.tui import run_tui
 
 app = typer.Typer(
@@ -74,11 +73,24 @@ def capture(config: Path) -> None:
 
 
 @app.command()
-def compare(left_run: Path, right_run: Path) -> None:
+def compare(
+    left_run: Path,
+    right_run: Path,
+    json_output: bool = typer.Option(False, "--json", help="Emit machine-readable JSON."),
+) -> None:
     """Compare two runs."""
     left = _open_session(left_run)
     right = _open_session(right_run)
-    _run_or_fail(lambda: left.compare(right))
+    result = _compare_or_fail(left, right)
+    if json_output:
+        typer.echo(json.dumps(_comparison_to_json(result), indent=2, sort_keys=True))
+        return
+    comparison = result.comparison
+    typer.echo(f"Left: {comparison.left_run_id}")
+    typer.echo(f"Right: {comparison.right_run_id}")
+    typer.echo(f"Layer matches: {len(comparison.layer_matches)}")
+    typer.echo(f"Metric deltas: {len(comparison.metric_deltas)}")
+    typer.echo(f"Diagnostics: {len(comparison.diagnostics)}")
 
 
 @app.command()
@@ -131,9 +143,9 @@ def _open_session(run: Path) -> Session:
         _fail(str(error))
 
 
-def _run_or_fail(operation: Callable[[], object]) -> None:
+def _compare_or_fail(left: Session, right: Session) -> ComparisonResult:
     try:
-        operation()
+        return left.compare(right)
     except SpelunkError as error:
         _fail(str(error))
 
@@ -208,5 +220,42 @@ def _scan_to_json(result: ScanResult) -> dict[str, object]:
                 ],
             }
             for diagnostic in result.diagnostics
+        ],
+    }
+
+
+def _comparison_to_json(result: ComparisonResult) -> dict[str, object]:
+    comparison = result.comparison
+    return {
+        "left_run_id": comparison.left_run_id,
+        "right_run_id": comparison.right_run_id,
+        "layer_matches": [
+            {
+                "left_layer_id": match.left_layer_id,
+                "right_layer_id": match.right_layer_id,
+                "confidence": match.confidence,
+            }
+            for match in comparison.layer_matches
+        ],
+        "metric_deltas": [
+            {
+                "subject_id": delta.subject_id,
+                "metric": delta.metric,
+                "left_value": delta.left_value,
+                "right_value": delta.right_value,
+                "delta": delta.delta,
+            }
+            for delta in comparison.metric_deltas
+        ],
+        "diagnostics": [
+            {
+                "id": diagnostic.id,
+                "name": diagnostic.name,
+                "subject_id": diagnostic.subject_id,
+                "subject_type": diagnostic.subject_type,
+                "severity": diagnostic.severity,
+                "conclusion": diagnostic.conclusion,
+            }
+            for diagnostic in comparison.diagnostics
         ],
     }

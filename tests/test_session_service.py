@@ -162,11 +162,44 @@ def test_session_report_includes_scan_evidence(tmp_path: Path) -> None:
     assert "inactive" in payload["diagnostics"][0]["conclusion"]
 
 
+def test_session_compare_returns_layer_matches_and_metric_deltas(tmp_path: Path) -> None:
+    left = Session.create(tmp_path / "left.spelunk", model=_model(), dataset=_dataset())
+    right = Session.create(tmp_path / "right.spelunk", model=_model(), dataset=_dataset())
+    NumpyShardActivationStore(left.root / "activations").write_batch(
+        ActivationBatch(
+            run_id=left.run_id,
+            checkpoint_id=CheckpointId("ckpt-001"),
+            layer_id=LayerId("encoder"),
+            sample_ids=(SampleId("sample-0"),),
+            array=[[1.0, 2.0]],
+            shape=(1, 2),
+            dtype="float32",
+        )
+    )
+    NumpyShardActivationStore(right.root / "activations").write_batch(
+        ActivationBatch(
+            run_id=right.run_id,
+            checkpoint_id=CheckpointId("ckpt-001"),
+            layer_id=LayerId("encoder"),
+            sample_ids=(SampleId("sample-0"), SampleId("sample-1")),
+            array=[[2.0, 4.0], [6.0, 8.0]],
+            shape=(2, 2),
+            dtype="float32",
+        )
+    )
+
+    result = left.compare(right)
+    comparison = result.comparison
+
+    assert comparison.left_run_id == "left"
+    assert comparison.right_run_id == "right"
+    assert comparison.layer_matches[0].left_layer_id == "encoder"
+    assert any(delta.metric == "activation_mean" for delta in comparison.metric_deltas)
+    assert any(delta.metric == "activation_count" for delta in comparison.metric_deltas)
+
+
 def test_future_service_contracts_fail_explicitly(tmp_path: Path) -> None:
     session = Session.create(tmp_path / "run-001.spelunk", model=_model(), dataset=_dataset())
 
     with pytest.raises(UnsupportedOperationError, match="Capture is not implemented"):
         session.capture(CapturePlan(layers=("encoder",), dataset="sample"))
-
-    with pytest.raises(UnsupportedOperationError, match="Run comparison is not implemented"):
-        session.compare(session)
