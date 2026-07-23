@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "spelunk"
-version = "0.0.0"
+version = "0.1.0a1"
 description = "Terminal-native IDE for learned representations."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
-  { name = "Sarthak Engala" },
+  { name = "Sarthak Engala", email = "sarthakengala@gmail.com" },
 ]
 keywords = [
   "machine-learning",
@@ -28,11 +28,17 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+
 dependencies = [
   "rich>=13.7",
   "textual>=0.70",
   "typer>=0.12",
 ]
+
+[project.urls]
+Homepage = "https://github.com/sre0089/spelunk"
+Repository = "https://github.com/sre0089/spelunk"
+Issues = "https://github.com/sre0089/spelunk/issues"
 
 [project.optional-dependencies]
 dev = [
