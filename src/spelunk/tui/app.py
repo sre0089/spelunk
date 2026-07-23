@@ -8,6 +8,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Footer, Header, Label, ListItem, ListView, Static
 
+from spelunk.config import load_recent_runs, remember_recent_run
 from spelunk.errors import SpelunkError
 from spelunk.services import Session
 from spelunk.services.results import ScanResult
@@ -100,6 +101,8 @@ class SpelunkApp(App[None]):
         super().__init__()
         self.app_state = state or AppState()
         self.session: Session | None = None
+        if state is None:
+            self.app_state.recent_runs = load_recent_runs()
         if run_path is not None:
             self._load_run(run_path)
         self.breadcrumbs = Breadcrumbs()
@@ -179,6 +182,8 @@ class SpelunkApp(App[None]):
             self.app_state.selected_mode = "project"
             self.app_state.breadcrumbs = ("Projects", "Open failed")
             return
+        remember_recent_run(self.session.root)
+        self.app_state.recent_runs = load_recent_runs()
         self._apply_scan_result(scan_result)
 
     def _apply_scan_result(self, scan_result: ScanResult) -> None:
@@ -189,13 +194,13 @@ class SpelunkApp(App[None]):
 
     def _navigation(self) -> ListView:
         if self.app_state.scan_result is None:
-            return ListView(
-                ListItem(Label("Recent runs")),
-                ListItem(Label("Create capture run")),
-                ListItem(Label("Open run directory")),
-                ListItem(Label("Settings")),
-                id="project-actions",
-            )
+            recent_items = [
+                ListItem(Label(str(path)), id=f"recent-run-{index}")
+                for index, path in enumerate(self.app_state.recent_runs)
+            ]
+            if not recent_items:
+                recent_items = [ListItem(Label("No recent runs"), id="no-recent-runs")]
+            return ListView(*recent_items, id="project-actions")
         return ListView(
             ListItem(Label("Overview"), id="overview-action"),
             ListItem(Label("Layers"), id="layers-action"),
@@ -212,8 +217,7 @@ class SpelunkApp(App[None]):
         if self.app_state.scan_result is None:
             yield Static("Project Picker", classes="panel-title", id="primary-title")
             yield Static(
-                "Select a run or create a capture plan. "
-                "Backend services are ready for manifest-backed runs.",
+                _project_picker_text(self.app_state),
                 id="primary-copy",
             )
             return
@@ -241,6 +245,15 @@ def _layer_summary_text(scan: ScanResult) -> str:
             f"- {summary.layer_id}: activations={summary.activation_count}, "
             f"features={summary.feature_count}"
         )
+    return "\n".join(lines)
+
+
+def _project_picker_text(state: AppState) -> str:
+    if not state.recent_runs:
+        return "Open a run with `spelunk open RUN` to add it to recent runs."
+    lines = ["Recent runs"]
+    for path in state.recent_runs:
+        lines.append(f"- {path}")
     return "\n".join(lines)
 
 

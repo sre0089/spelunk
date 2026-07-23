@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from spelunk.domain import CheckpointId, FeatureId, LayerId, RunId
 from spelunk.services.results import ScanResult
@@ -24,3 +25,4 @@ class AppState:
     scan_result: ScanResult | None = None
     error_message: str | None = None
     report_message: str = ""
+    recent_runs: tuple[Path, ...] = ()

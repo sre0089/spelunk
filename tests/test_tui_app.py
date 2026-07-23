@@ -1,23 +1,49 @@
 import asyncio
 from pathlib import Path
 
-from textual.widgets import ListView, Static
+from pytest import MonkeyPatch
+from textual.widgets import Label, ListView, Static
 
 from spelunk.capture import ActivationBatch
+from spelunk.config import remember_recent_run
 from spelunk.domain import CheckpointId, DatasetId, DatasetRef, LayerId, ModelId, ModelRef, SampleId
 from spelunk.services import Session
 from spelunk.storage import NumpyShardActivationStore
 from spelunk.tui import SpelunkApp
 
 
-def test_tui_project_picker_renders() -> None:
+def test_tui_project_picker_renders(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("SPELUNK_CONFIG_HOME", str(tmp_path / "config"))
+
     async def scenario() -> None:
         app = SpelunkApp()
         async with app.run_test() as pilot:
             await pilot.pause()
             assert app.title == "Spelunk"
-            assert "Select a run" in str(app.query_one("#primary-copy", Static).render())
+            assert "Open a run with `spelunk open RUN`" in str(
+                app.query_one("#primary-copy", Static).render()
+            )
             assert app.query_one("#project-actions", ListView).index == 0
+
+    asyncio.run(scenario())
+
+
+def test_tui_project_picker_renders_recent_runs(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SPELUNK_CONFIG_HOME", str(tmp_path / "config"))
+    run = tmp_path / "run-001.spelunk"
+    remember_recent_run(run)
+
+    async def scenario() -> None:
+        app = SpelunkApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            content = str(app.query_one("#primary-copy", Static).render())
+            titles = [str(widget.render()) for widget in app.screen.query(Label)]
+            assert str(run.resolve()) in content
+            assert any(str(run.resolve()) in title for title in titles)
 
     asyncio.run(scenario())
 
@@ -34,7 +60,8 @@ def test_tui_command_palette_opens() -> None:
     asyncio.run(scenario())
 
 
-def test_tui_renders_loaded_run_scan(tmp_path: Path) -> None:
+def test_tui_renders_loaded_run_scan(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("SPELUNK_CONFIG_HOME", str(tmp_path / "config"))
     run = _run_with_activations(tmp_path)
 
     async def scenario() -> None:
@@ -53,7 +80,11 @@ def test_tui_renders_loaded_run_scan(tmp_path: Path) -> None:
     asyncio.run(scenario())
 
 
-def test_tui_navigation_switches_loaded_run_views(tmp_path: Path) -> None:
+def test_tui_navigation_switches_loaded_run_views(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SPELUNK_CONFIG_HOME", str(tmp_path / "config"))
     run = _run_with_activations(tmp_path)
 
     async def scenario() -> None:
@@ -72,7 +103,11 @@ def test_tui_navigation_switches_loaded_run_views(tmp_path: Path) -> None:
     asyncio.run(scenario())
 
 
-def test_tui_generate_reports_action_writes_artifacts(tmp_path: Path) -> None:
+def test_tui_generate_reports_action_writes_artifacts(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SPELUNK_CONFIG_HOME", str(tmp_path / "config"))
     run = _run_with_activations(tmp_path)
 
     async def scenario() -> None:

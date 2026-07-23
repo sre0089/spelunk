@@ -7,6 +7,7 @@ from typer.testing import CliRunner
 
 import spelunk.cli.app as cli_app
 from spelunk.capture import ActivationBatch
+from spelunk.config import load_recent_runs
 from spelunk.domain import CheckpointId, DatasetId, DatasetRef, LayerId, ModelId, ModelRef, SampleId
 from spelunk.services import Session
 from spelunk.storage import NumpyShardActivationStore
@@ -64,6 +65,7 @@ def test_doctor_reports_basic_status() -> None:
 def test_open_launches_tui_for_run(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     run = _run(tmp_path)
     launched: list[Path] = []
+    monkeypatch.setenv("SPELUNK_CONFIG_HOME", str(tmp_path / "config"))
 
     def fake_run_tui(run_path: Path | None = None) -> None:
         if run_path is not None:
@@ -75,6 +77,7 @@ def test_open_launches_tui_for_run(tmp_path: Path, monkeypatch: MonkeyPatch) -> 
 
     assert result.exit_code == 0
     assert launched == [run]
+    assert load_recent_runs() == (run.resolve(),)
 
 
 def test_scan_json_uses_session_service(tmp_path: Path) -> None:

@@ -9,6 +9,7 @@ from typing import Literal, NoReturn, cast
 import typer
 
 from spelunk import __version__
+from spelunk.config import remember_recent_run
 from spelunk.errors import SpelunkError
 from spelunk.services import Session, run_capture_config
 from spelunk.services.results import (
@@ -45,6 +46,8 @@ def root(
 @app.command()
 def open(run: Path) -> None:
     """Open a run in the terminal application."""
+    session = _open_session(run)
+    remember_recent_run(session.root)
     run_tui(run)
 
 
