@@ -134,5 +134,6 @@ See `docs/PYTHON_API.md`.
 - `docs/ROADMAP.md`
 - `docs/RELEASE.md`
 - `docs/CLEAN_INSTALL.md`
+- `docs/PYPI_RELEASE.md`
 - `docs/CONTRIBUTING.md`
 - `docs/DECISIONS.md`

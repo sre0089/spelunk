@@ -59,3 +59,5 @@ Include:
 - known limitations
 - Python version support
 - optional dependency groups
+
+Use `CHANGELOG.md` and `docs/PYPI_RELEASE.md` for PyPI release prep.

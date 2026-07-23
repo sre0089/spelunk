@@ -46,6 +46,7 @@ dev = [
   "mypy>=1.10",
   "pytest>=8.2",
   "ruff>=0.5",
+  "twine>=5.1",
 ]
 pytorch = [
   "torch>=2.2",
