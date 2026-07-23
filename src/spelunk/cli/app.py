@@ -11,7 +11,7 @@ import typer
 
 from spelunk import __version__
 from spelunk.errors import SpelunkError
-from spelunk.services import Session
+from spelunk.services import Session, run_capture_config
 from spelunk.services.results import RunSummary, ScanResult
 from spelunk.tui import run_tui
 
@@ -62,7 +62,15 @@ def scan(
 @app.command()
 def capture(config: Path) -> None:
     """Capture activations from a capture configuration file."""
-    _fail(f"Capture config execution is scheduled for M7: {config}")
+    try:
+        result = run_capture_config(config)
+    except SpelunkError as error:
+        _fail(str(error))
+    typer.echo(f"Run: {result.run.run_id}")
+    typer.echo(f"Checkpoint: {result.checkpoint_id}")
+    typer.echo(f"Layers: {', '.join(str(layer) for layer in result.captured_layers)}")
+    typer.echo(f"Samples: {result.captured_samples}")
+    typer.echo(f"Batches: {result.batch_count}")
 
 
 @app.command()

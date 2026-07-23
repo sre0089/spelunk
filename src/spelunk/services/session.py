@@ -10,6 +10,7 @@ from spelunk.diagnostics import ActivationHealthDiagnostic, DiagnosticContext
 from spelunk.domain import (
     Checkpoint,
     DatasetRef,
+    Layer,
     ModelRef,
     Report,
     ReportFormat,
@@ -71,6 +72,7 @@ class Session:
         model: ModelRef,
         dataset: DatasetRef,
         checkpoints: tuple[Checkpoint, ...] = (),
+        layers: tuple[Layer, ...] = (),
         storage_backend: StorageBackend = "numpy-shards",
     ) -> Session:
         root = Path(location)
@@ -82,6 +84,7 @@ class Session:
             model=model,
             dataset=dataset,
             checkpoints=checkpoints,
+            layers=layers,
             storage=StorageBackendSpec(kind=storage_backend, root="activations"),
         )
         write_manifest(root / MANIFEST_FILENAME, manifest)
@@ -113,6 +116,10 @@ class Session:
         if self._manifest.storage.kind == "zarr":
             return ZarrActivationStore(root)
         raise StorageError(f"Unsupported activation storage backend: {self._manifest.storage.kind}")
+
+    def activation_sink(self) -> ActivationStore:
+        """Return the configured activation sink for capture execution."""
+        return self._activation_store()
 
     def scan(self) -> ScanResult:
         store = self._activation_store()

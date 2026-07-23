@@ -8,6 +8,7 @@ from datetime import datetime
 from spelunk.domain import (
     DatasetRef,
     DiagnosticResult,
+    LayerId,
     LayerSummary,
     ModelRef,
     Report,
@@ -50,6 +51,10 @@ class CapturePlan:
 @dataclass(frozen=True, slots=True)
 class CaptureResult:
     run: RunSummary
+    checkpoint_id: str
+    captured_layers: tuple[LayerId, ...]
+    captured_samples: int
+    batch_count: int
 
 
 @dataclass(frozen=True, slots=True)

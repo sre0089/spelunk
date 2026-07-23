@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import pytest
 from pytest import MonkeyPatch
 from typer.testing import CliRunner
 
@@ -113,6 +114,66 @@ def test_scan_json_includes_diagnostics(tmp_path: Path) -> None:
     assert "inactive" in payload["diagnostics"][0]["conclusion"]
 
 
+def test_capture_config_executes_pytorch_capture(tmp_path: Path) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("torch")
+    data_path = tmp_path / "samples.npy"
+    np.save(data_path, np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32))
+    model_path = tmp_path / "model_factory.py"
+    model_path.write_text(
+        "\n".join(
+            [
+                "from collections import OrderedDict",
+                "import torch",
+                "",
+                "def build_model():",
+                "    return torch.nn.Sequential(",
+                "        OrderedDict([('encoder', torch.nn.Linear(2, 2, bias=False))])",
+                "    )",
+                "",
+            ]
+        )
+    )
+    config_path = tmp_path / "capture.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "run": "run-001.spelunk",
+                "model": {
+                    "id": "model-001",
+                    "name": "Tiny Torch",
+                    "framework": "pytorch",
+                    "path": "model_factory.py",
+                    "factory": "build_model",
+                },
+                "dataset": {
+                    "id": "dataset-001",
+                    "name": "samples",
+                    "kind": "numpy",
+                    "source": "samples.npy",
+                },
+                "capture": {
+                    "layers": ["encoder"],
+                    "checkpoint_id": "ckpt-001",
+                    "checkpoint_label": "initial",
+                    "batch_size": 2,
+                    "max_samples": 2,
+                },
+            }
+        )
+    )
+
+    result = runner.invoke(cli_app.app, ["capture", str(config_path)])
+
+    assert result.exit_code == 0
+    assert "Run: run-001" in result.output
+    assert "Layers: encoder" in result.output
+    assert "Samples: 2" in result.output
+    scan = Session.open(tmp_path / "run-001.spelunk").scan()
+    assert scan.layers[0].layer_id == "encoder"
+    assert scan.layers[0].activation_count == 2
+
+
 def test_report_json_outputs_manifest_summary(tmp_path: Path) -> None:
     run = _run(tmp_path)
 
@@ -134,15 +195,12 @@ def test_missing_run_exits_with_error(tmp_path: Path) -> None:
 def test_future_commands_fail_explicitly(tmp_path: Path) -> None:
     run = _run(tmp_path)
 
-    capture = runner.invoke(cli_app.app, ["capture", "capture.toml"])
     compare = runner.invoke(cli_app.app, ["compare", str(run), str(run)])
     inspect = runner.invoke(
         cli_app.app,
         ["inspect", str(run), "--layer", "encoder", "--feature", "0"],
     )
 
-    assert capture.exit_code == 1
-    assert "Capture config execution is scheduled for M7" in capture.output
     assert compare.exit_code == 1
     assert "Run comparison is not implemented" in compare.output
     assert inspect.exit_code == 1
