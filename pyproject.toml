@@ -29,6 +29,8 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
+  "rich>=13.7",
+  "textual>=0.70",
   "typer>=0.12",
 ]
 
@@ -41,10 +43,7 @@ dev = [
 pytorch = [
   "torch>=2.2",
 ]
-tui = [
-  "rich>=13.7",
-  "textual>=0.70",
-]
+tui = []
 arrays = [
   "numpy>=1.26",
   "zarr>=2.18",

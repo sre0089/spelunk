@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
 
+from pytest import MonkeyPatch
 from typer.testing import CliRunner
 
-from spelunk.cli.app import app
+import spelunk.cli.app as cli_app
 from spelunk.domain import DatasetId, DatasetRef, ModelId, ModelRef
 from spelunk.services import Session
 
@@ -34,15 +35,23 @@ def _run(tmp_path: Path) -> Path:
     return root
 
 
-def test_default_command_shows_project_picker_placeholder() -> None:
-    result = runner.invoke(app, [])
+def test_default_command_launches_tui(monkeypatch: MonkeyPatch) -> None:
+    launched = False
+
+    def fake_run_tui() -> None:
+        nonlocal launched
+        launched = True
+
+    monkeypatch.setattr(cli_app, "run_tui", fake_run_tui)
+
+    result = runner.invoke(cli_app.app, [])
 
     assert result.exit_code == 0
-    assert "project picker is scheduled for M5" in result.output
+    assert launched
 
 
 def test_doctor_reports_basic_status() -> None:
-    result = runner.invoke(app, ["doctor"])
+    result = runner.invoke(cli_app.app, ["doctor"])
 
     assert result.exit_code == 0
     assert "Spelunk doctor" in result.output
@@ -52,7 +61,7 @@ def test_doctor_reports_basic_status() -> None:
 def test_open_prints_run_summary(tmp_path: Path) -> None:
     run = _run(tmp_path)
 
-    result = runner.invoke(app, ["open", str(run)])
+    result = runner.invoke(cli_app.app, ["open", str(run)])
 
     assert result.exit_code == 0
     assert "Run: run-001" in result.output
@@ -62,7 +71,7 @@ def test_open_prints_run_summary(tmp_path: Path) -> None:
 def test_scan_json_uses_session_service(tmp_path: Path) -> None:
     run = _run(tmp_path)
 
-    result = runner.invoke(app, ["scan", str(run), "--json"])
+    result = runner.invoke(cli_app.app, ["scan", str(run), "--json"])
 
     assert result.exit_code == 0
     payload = json.loads(result.output)
@@ -74,7 +83,7 @@ def test_scan_json_uses_session_service(tmp_path: Path) -> None:
 def test_report_json_outputs_manifest_summary(tmp_path: Path) -> None:
     run = _run(tmp_path)
 
-    result = runner.invoke(app, ["report", str(run), "--format", "json"])
+    result = runner.invoke(cli_app.app, ["report", str(run), "--format", "json"])
 
     assert result.exit_code == 0
     payload = json.loads(result.output)
@@ -83,7 +92,7 @@ def test_report_json_outputs_manifest_summary(tmp_path: Path) -> None:
 
 
 def test_missing_run_exits_with_error(tmp_path: Path) -> None:
-    result = runner.invoke(app, ["scan", str(tmp_path / "missing.spelunk")])
+    result = runner.invoke(cli_app.app, ["scan", str(tmp_path / "missing.spelunk")])
 
     assert result.exit_code == 1
     assert "No Spelunk manifest" in result.output
@@ -92,9 +101,12 @@ def test_missing_run_exits_with_error(tmp_path: Path) -> None:
 def test_future_commands_fail_explicitly(tmp_path: Path) -> None:
     run = _run(tmp_path)
 
-    capture = runner.invoke(app, ["capture", "capture.toml"])
-    compare = runner.invoke(app, ["compare", str(run), str(run)])
-    inspect = runner.invoke(app, ["inspect", str(run), "--layer", "encoder", "--feature", "0"])
+    capture = runner.invoke(cli_app.app, ["capture", "capture.toml"])
+    compare = runner.invoke(cli_app.app, ["compare", str(run), str(run)])
+    inspect = runner.invoke(
+        cli_app.app,
+        ["inspect", str(run), "--layer", "encoder", "--feature", "0"],
+    )
 
     assert capture.exit_code == 1
     assert "Capture config execution is scheduled for M7" in capture.output

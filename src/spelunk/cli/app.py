@@ -13,6 +13,7 @@ from spelunk import __version__
 from spelunk.errors import SpelunkError
 from spelunk.services import Session
 from spelunk.services.results import RunSummary, ScanResult
+from spelunk.tui import run_tui
 
 app = typer.Typer(
     add_completion=False,
@@ -34,7 +35,7 @@ def root(
         typer.echo(__version__)
         raise typer.Exit()
     if ctx.invoked_subcommand is None:
-        typer.echo("Spelunk project picker is scheduled for M5. Use 'spelunk --help' for now.")
+        run_tui()
 
 
 @app.command()
