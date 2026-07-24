@@ -614,6 +614,7 @@ def _comparison_summary_text(state: AppState) -> str:
     if result is None:
         return "Press `c` to compare this run with another recent run."
     comparison = result.comparison
+    strongest = _strongest_delta_text(state)
     return "\n".join(
         [
             f"Left: {comparison.left_run_id}",
@@ -621,6 +622,7 @@ def _comparison_summary_text(state: AppState) -> str:
             f"Layer matches: {len(comparison.layer_matches)}",
             f"Metric deltas: {len(comparison.metric_deltas)}",
             f"Diagnostics: {len(comparison.diagnostics)}",
+            f"Strongest delta: {strongest}",
             "",
             _comparison_delta_table(state, limit=8),
         ]
@@ -650,16 +652,42 @@ def _comparison_delta_table(state: AppState, *, limit: int) -> str:
     )
     if not deltas:
         return "No metric deltas found."
-    lines = ["Metric deltas", "Layer        Metric              Left       Right      Delta"]
+    max_delta = max((abs(delta.delta) for delta in deltas if delta.delta is not None), default=0.0)
+    lines = [
+        "Metric deltas",
+        "Layer        Metric              Left       Right      Delta     Magnitude",
+    ]
     for delta in deltas[:limit]:
+        magnitude = ""
+        if delta.delta is not None:
+            magnitude = _bar(abs(delta.delta), max_delta)
         lines.append(
             f"{_fit(delta.subject_id, 12)} "
             f"{_fit(delta.metric, 18)} "
             f"{_number_text(delta.left_value):>9} "
             f"{_number_text(delta.right_value):>9} "
-            f"{_number_text(delta.delta):>9}"
+            f"{_number_text(delta.delta):>9} "
+            f"{magnitude}"
         )
     return "\n".join(lines)
+
+
+def _strongest_delta_text(state: AppState) -> str:
+    result = state.comparison_result
+    if result is None:
+        return "none"
+    deltas = [
+        delta
+        for delta in result.comparison.metric_deltas
+        if delta.delta is not None
+    ]
+    if not deltas:
+        return "none"
+    strongest = max(deltas, key=lambda delta: abs(delta.delta or 0.0))
+    return (
+        f"{strongest.subject_id} {strongest.metric} "
+        f"({_number_text(strongest.delta)})"
+    )
 
 
 def _number_text(value: object) -> str:
