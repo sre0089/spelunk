@@ -318,6 +318,56 @@ def test_quickstart_captures_reports_and_prints_tui_command(
     assert load_recent_runs() == ((tmp_path / "run-001.spelunk").resolve(),)
 
 
+def test_init_writes_starter_capture_config(tmp_path: Path) -> None:
+    output = tmp_path / "spelunk.json"
+
+    result = runner.invoke(
+        cli_app.app,
+        [
+            "init",
+            "--output",
+            str(output),
+            "--run",
+            "runs/demo.spelunk",
+            "--model-path",
+            "model_factory.py",
+            "--dataset",
+            "samples.csv",
+            "--layers",
+            "encoder",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Wrote" in result.output
+    payload = json.loads(output.read_text())
+    assert payload["run"] == "runs/demo.spelunk"
+    assert payload["model"]["path"] == "model_factory.py"
+    assert payload["dataset"]["kind"] == "csv"
+    assert payload["capture"]["layers"] == ["encoder"]
+
+
+def test_init_refuses_to_overwrite_without_force(tmp_path: Path) -> None:
+    output = tmp_path / "spelunk.json"
+    output.write_text("{}\n")
+
+    result = runner.invoke(cli_app.app, ["init", "--output", str(output)])
+
+    assert result.exit_code == 1
+    assert "Pass --force to overwrite" in result.output
+    assert output.read_text() == "{}\n"
+
+
+def test_init_force_overwrites_existing_config(tmp_path: Path) -> None:
+    output = tmp_path / "spelunk.json"
+    output.write_text("{}\n")
+
+    result = runner.invoke(cli_app.app, ["init", "--output", str(output), "--force"])
+
+    assert result.exit_code == 0
+    assert json.loads(output.read_text())["capture"]["layers"] == ["encoder"]
+
+
 def test_layers_lists_model_layer_selectors(tmp_path: Path) -> None:
     pytest.importorskip("torch")
     model_path = tmp_path / "model_factory.py"

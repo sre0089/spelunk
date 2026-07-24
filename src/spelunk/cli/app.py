@@ -20,7 +20,7 @@ from spelunk.services.results import (
     RunSummary,
     ScanResult,
 )
-from spelunk.services.workflow import build_capture_config, load_model
+from spelunk.services.workflow import build_capture_config, infer_dataset_kind, load_model
 from spelunk.tui import run_tui
 
 app = typer.Typer(
@@ -315,6 +315,82 @@ def quickstart(
 
 
 @app.command()
+def init(
+    output: Annotated[
+        Path,
+        typer.Option("--output", help="Capture config file to write."),
+    ] = Path("spelunk.json"),
+    run: Annotated[
+        Path,
+        typer.Option("--run", help="Default output run directory."),
+    ] = Path("runs/experiment.spelunk"),
+    model_path: Annotated[
+        Path | None,
+        typer.Option("--model-path", help="Python file containing the model factory."),
+    ] = None,
+    model_module: Annotated[
+        str | None,
+        typer.Option("--model-module", help="Importable module containing the model factory."),
+    ] = None,
+    factory: Annotated[
+        str,
+        typer.Option("--factory", help="Model factory callable name."),
+    ] = "build_model",
+    dataset: Annotated[
+        Path | None,
+        typer.Option("--dataset", help="Dataset file or image folder."),
+    ] = None,
+    layer_selectors: Annotated[
+        list[str] | None,
+        typer.Option("--layers", help="Layer selector to capture. Repeat for multiple layers."),
+    ] = None,
+    dataset_kind: Annotated[
+        str | None,
+        typer.Option("--dataset-kind", help="Dataset kind: numpy, csv, jsonl, or image-folder."),
+    ] = None,
+    storage_backend: Annotated[
+        str,
+        typer.Option("--storage-backend", help="Storage backend: numpy-shards or zarr."),
+    ] = "numpy-shards",
+    batch_size: Annotated[
+        int,
+        typer.Option("--batch-size", help="Capture batch size."),
+    ] = 32,
+    max_samples: Annotated[
+        int | None,
+        typer.Option("--max-samples", help="Maximum samples to capture."),
+    ] = None,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Overwrite an existing config file."),
+    ] = False,
+) -> None:
+    """Write a starter capture config."""
+    if output.exists() and not force:
+        _fail(f"Config already exists: {output}. Pass --force to overwrite.")
+    if dataset is not None and dataset_kind is None:
+        try:
+            dataset_kind = infer_dataset_kind(dataset)
+        except SpelunkError:
+            dataset_kind = "numpy"
+    payload = _starter_config_payload(
+        run=run,
+        model_path=model_path,
+        model_module=model_module,
+        factory=factory,
+        dataset=dataset,
+        layers=tuple(layer_selectors or ("encoder",)),
+        dataset_kind=dataset_kind or "numpy",
+        storage_backend=storage_backend,
+        batch_size=batch_size,
+        max_samples=max_samples,
+    )
+    output.write_text(json.dumps(payload, indent=2) + "\n")
+    typer.echo(f"Wrote {output}")
+    typer.echo(f"Run capture with: spelunk capture {output}")
+
+
+@app.command()
 def compare(
     left_run: Path,
     right_run: Path,
@@ -447,6 +523,51 @@ def _capture_config_from_flags(
         batch_size=batch_size,
         max_samples=max_samples,
     )
+
+
+def _starter_config_payload(
+    *,
+    run: Path,
+    model_path: Path | None,
+    model_module: str | None,
+    factory: str,
+    dataset: Path | None,
+    layers: tuple[str, ...],
+    dataset_kind: str,
+    storage_backend: str,
+    batch_size: int,
+    max_samples: int | None,
+) -> dict[str, object]:
+    model: dict[str, object] = {
+        "id": "model",
+        "name": _default_model_name(model_path, model_module),
+        "framework": "pytorch",
+        "factory": factory,
+    }
+    if model_module is not None:
+        model["module"] = model_module
+    else:
+        model["path"] = str(model_path or Path("model_factory.py"))
+    capture: dict[str, object] = {
+        "layers": list(layers),
+        "checkpoint_id": "ckpt-001",
+        "checkpoint_label": "initial",
+        "batch_size": batch_size,
+    }
+    if max_samples is not None:
+        capture["max_samples"] = max_samples
+    return {
+        "run": str(run),
+        "storage_backend": storage_backend,
+        "model": model,
+        "dataset": {
+            "id": "dataset",
+            "name": dataset.stem if dataset is not None else "dataset",
+            "kind": dataset_kind,
+            "source": str(dataset or Path("samples.npy")),
+        },
+        "capture": capture,
+    }
 
 
 def _fail(message: str) -> NoReturn:

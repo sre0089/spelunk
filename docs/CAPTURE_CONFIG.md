@@ -7,8 +7,22 @@ Capture configs describe one local activation capture run. Spelunk owns dataset 
 Spelunk accepts JSON and TOML:
 
 ```bash
+spelunk init --output spelunk.json
 spelunk capture examples/capture.json
 spelunk capture examples/capture.toml
+```
+
+For a lower-friction first run, config files are optional:
+
+```bash
+spelunk layers --model-path model_factory.py --factory build_model
+
+spelunk quickstart \
+  --run runs/experiment.spelunk \
+  --model-path model_factory.py \
+  --factory build_model \
+  --dataset samples.npy \
+  --layers encoder
 ```
 
 ## Required Fields

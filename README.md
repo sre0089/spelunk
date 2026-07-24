@@ -28,9 +28,44 @@ python -m mypy
 
 ## Quickstart
 
-Start from the example config:
+Generate the example dataset:
 
 ```bash
+python examples/generate_samples.py
+```
+
+Discover valid layer selectors from a PyTorch model factory:
+
+```bash
+spelunk layers --model-path examples/model_factory.py --factory build_model
+```
+
+Run the lowest-friction workflow:
+
+```bash
+spelunk quickstart \
+  --run runs/tiny-autoencoder.spelunk \
+  --model-path examples/model_factory.py \
+  --factory build_model \
+  --dataset examples/samples.npy \
+  --layers encoder
+```
+
+Or capture directly from flags:
+
+```bash
+spelunk capture \
+  --run runs/tiny-autoencoder.spelunk \
+  --model-path examples/model_factory.py \
+  --factory build_model \
+  --dataset examples/samples.npy \
+  --layers encoder
+```
+
+For reproducible workflows, generate or edit a config:
+
+```bash
+spelunk init --model-path model_factory.py --dataset samples.npy --layers encoder
 spelunk capture examples/capture.json
 ```
 
@@ -96,6 +131,10 @@ See `docs/PYTHON_API.md`.
 
 ## What Works Today
 
+- layer discovery for PyTorch model factories
+- direct flag-based capture
+- one-shot quickstart capture, scan, and report generation
+- starter config generation
 - JSON and TOML capture configs
 - Spelunk-owned dataset loading for NumPy, CSV, JSONL, and image folders
 - PyTorch activation capture through selected forward hooks
@@ -109,8 +148,6 @@ See `docs/PYTHON_API.md`.
 
 ## Current Limitations
 
-- default `spelunk` project picker is still early
-- TUI compare and feature-inspection workflows are not implemented yet
 - capture requires a local PyTorch model factory
 - model loading does not handle checkpoint files directly yet
 - no packaged PyPI release has been cut yet
