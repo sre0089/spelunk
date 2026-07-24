@@ -160,12 +160,16 @@ def test_tui_generate_reports_action_writes_artifacts(
             await pilot.press("r")
             await pilot.pause()
             viewer = app.query_one("#primary-copy", MarkdownViewer)
+            artifacts = str(app.query_one("#layer-summary", Static).render())
             details = str(app.query_one("#details-copy", Static).render())
             assert "# Spelunk report for run-001" in viewer.markdown_source
             assert "## Diagnostics" in viewer.markdown_source
-            assert "Generated report.md and report.json" in details
-            assert "Markdown:" in details
-            assert "JSON:" in details
+            assert "Report artifacts" in artifacts
+            assert "Generated report.md and report.json" in artifacts
+            assert "Markdown:" in artifacts
+            assert "JSON:" in artifacts
+            assert "JSON summary" in details
+            assert "run_id: run-001" in details
 
     asyncio.run(scenario())
     assert (run / "reports" / "report.md").exists()

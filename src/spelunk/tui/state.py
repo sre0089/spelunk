@@ -28,6 +28,7 @@ class AppState:
     error_message: str | None = None
     report_message: str = ""
     report_markdown: str = ""
+    report_json: str = ""
     report_markdown_path: Path | None = None
     report_json_path: Path | None = None
     recent_runs: tuple[Path, ...] = ()

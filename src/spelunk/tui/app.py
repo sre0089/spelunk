@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from textual.app import App, ComposeResult
@@ -141,6 +142,7 @@ class SpelunkApp(App[None]):
         except SpelunkError as error:
             self.app_state.report_message = f"Report generation failed: {error}"
             self.app_state.report_markdown = ""
+            self.app_state.report_json = ""
             self.app_state.report_markdown_path = None
             self.app_state.report_json_path = None
         else:
@@ -148,6 +150,7 @@ class SpelunkApp(App[None]):
                 f"Generated {markdown.path.name} and {json_report.path.name}"
             )
             self.app_state.report_markdown = markdown.content
+            self.app_state.report_json = json_report.content
             self.app_state.report_markdown_path = markdown.path
             self.app_state.report_json_path = json_report.path
         self.app_state.selected_mode = "reports"
@@ -409,7 +412,7 @@ def _secondary_content_text(state: AppState) -> str:
     if state.selected_mode == "compare":
         return _comparison_delta_text(state)
     if state.selected_mode == "reports":
-        return _report_details_text(state)
+        return _report_artifacts_text(state)
     return ""
 
 
@@ -427,7 +430,7 @@ def _details_text(state: AppState) -> str:
         return _comparison_delta_text(state)
     if state.selected_mode == "reports":
         if state.report_message:
-            return _report_details_text(state)
+            return _report_json_summary_text(state)
         return _diagnostic_summary_text(scan)
     return _diagnostic_summary_text(scan)
 
@@ -552,6 +555,55 @@ def _report_details_text(state: AppState) -> str:
         lines.append(f"Markdown: {state.report_markdown_path}")
     if state.report_json_path is not None:
         lines.append(f"JSON: {state.report_json_path}")
+    return "\n".join(lines)
+
+
+def _report_artifacts_text(state: AppState) -> str:
+    lines = ["Report artifacts"]
+    if not state.report_message:
+        lines.extend(
+            [
+                "- Markdown: not generated",
+                "- JSON: not generated",
+                "",
+                "Press `r` to generate report.md and report.json.",
+            ]
+        )
+        return "\n".join(lines)
+    lines.append(f"- Status: {state.report_message}")
+    if state.report_markdown_path is not None:
+        lines.append(f"- Markdown: {state.report_markdown_path}")
+    if state.report_json_path is not None:
+        lines.append(f"- JSON: {state.report_json_path}")
+    if state.report_markdown:
+        lines.append(f"- Markdown preview: {len(state.report_markdown.splitlines())} lines")
+    if state.report_json:
+        lines.append(f"- JSON payload: {len(state.report_json)} bytes")
+    return "\n".join(lines)
+
+
+def _report_json_summary_text(state: AppState) -> str:
+    if not state.report_json:
+        return _report_details_text(state)
+    try:
+        payload = json.loads(state.report_json)
+    except json.JSONDecodeError:
+        return _report_details_text(state)
+    diagnostics = payload.get("diagnostics")
+    layers = payload.get("layers")
+    lines = [
+        "JSON summary",
+        f"- run_id: {payload.get('run_id', 'unknown')}",
+        f"- model: {payload.get('model', {}).get('name', 'unknown')}",
+        f"- dataset: {payload.get('dataset', {}).get('name', 'unknown')}",
+        f"- activation_layer_count: {payload.get('activation_layer_count', 0)}",
+        f"- layer records: {len(layers) if isinstance(layers, list) else 0}",
+        f"- diagnostics: {len(diagnostics) if isinstance(diagnostics, list) else 0}",
+    ]
+    if state.report_markdown_path is not None:
+        lines.append(f"- markdown_path: {state.report_markdown_path}")
+    if state.report_json_path is not None:
+        lines.append(f"- json_path: {state.report_json_path}")
     return "\n".join(lines)
 
 
