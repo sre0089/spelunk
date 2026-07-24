@@ -31,10 +31,11 @@ class CommandPaletteScreen(ModalScreen[None]):
         with Vertical(id="palette"):
             yield Static("Command Palette", classes="panel-title")
             yield ListView(
-                ListItem(Label("Open project")),
-                ListItem(Label("Scan run")),
-                ListItem(Label("Generate report")),
-                ListItem(Label("Settings")),
+                ListItem(Label("Open recent run")),
+                ListItem(Label("Inspect feature")),
+                ListItem(Label("Compare recent run")),
+                ListItem(Label("Generate reports")),
+                ListItem(Label("Show shortcuts")),
             )
 
     def on_key(self, event: events.Key) -> None:
@@ -67,7 +68,9 @@ class ShortcutOverlayScreen(ModalScreen[None]):
                     "enter   open",
                     "tab     cycle panes",
                     "ctrl+p  command palette",
-                    "/       search",
+                    "i       inspect feature",
+                    "c       compare recent run",
+                    "r       generate reports",
                     "?       shortcuts",
                     "q       quit",
                 ]

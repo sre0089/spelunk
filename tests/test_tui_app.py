@@ -97,7 +97,25 @@ def test_tui_command_palette_opens() -> None:
             await pilot.press("ctrl+p")
             await pilot.pause()
             titles = [str(widget.render()) for widget in app.screen.query(Static)]
+            labels = [str(widget.render()) for widget in app.screen.query(Label)]
             assert "Command Palette" in titles
+            assert "Inspect feature" in labels
+            assert "Compare recent run" in labels
+            assert "Generate reports" in labels
+
+    asyncio.run(scenario())
+
+
+def test_tui_shortcuts_overlay_lists_release_actions() -> None:
+    async def scenario() -> None:
+        app = SpelunkApp()
+        async with app.run_test() as pilot:
+            await pilot.press("?")
+            await pilot.pause()
+            content = "\n".join(str(widget.render()) for widget in app.screen.query(Static))
+            assert "i       inspect feature" in content
+            assert "c       compare recent run" in content
+            assert "r       generate reports" in content
 
     asyncio.run(scenario())
 
@@ -248,6 +266,38 @@ def test_tui_compare_ignores_stale_recent_run(
             content = str(app.query_one("#primary-copy", Static).render())
             assert "No other recent run is available to compare" in content
             assert "Comparison failed" not in content
+
+    asyncio.run(scenario())
+
+
+def test_tui_release_smoke_flow(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SPELUNK_CONFIG_HOME", str(tmp_path / "config"))
+    left = _run_with_activations(tmp_path / "left", array=[[1.0, 0.0], [2.0, 0.0]])
+    right = _run_with_activations(tmp_path / "right", array=[[2.0, 1.0], [4.0, 1.0]])
+    remember_recent_run(right)
+
+    async def scenario() -> None:
+        app = SpelunkApp(run_path=left)
+        async with app.run_test() as pilot:
+            await pilot.press("i")
+            await pilot.pause()
+            assert "Inspect Feature" == str(app.query_one("#primary-title", Static).render())
+            assert "Top examples" in str(app.query_one("#details-copy", Static).render())
+
+            await pilot.press("c")
+            await pilot.pause()
+            assert "Compare Runs" == str(app.query_one("#primary-title", Static).render())
+            assert "Strongest delta:" in str(app.query_one("#primary-copy", Static).render())
+
+            await pilot.press("r")
+            await pilot.pause()
+            viewer = app.query_one("#primary-copy", MarkdownViewer)
+            assert "# Spelunk report for run-001" in viewer.markdown_source
+            assert "Report artifacts" in str(app.query_one("#layer-summary", Static).render())
+            assert "JSON summary" in str(app.query_one("#details-copy", Static).render())
 
     asyncio.run(scenario())
 

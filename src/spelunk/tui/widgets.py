@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from rich.markdown import Markdown
 from textual.widgets import Static
 
@@ -24,7 +26,7 @@ class StatusBar(Static):
 class MarkdownViewer(Static):
     """Static pane that can switch between plain text and Rich Markdown."""
 
-    def __init__(self, content: str = "", **kwargs: object) -> None:
+    def __init__(self, content: str = "", **kwargs: Any) -> None:
         super().__init__(content, **kwargs)
         self.markdown_source = ""
 
