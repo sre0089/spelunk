@@ -324,9 +324,11 @@ def _layer_summary_text(scan: ScanResult) -> str:
     if not scan.layers:
         return "No stored activation layers yet."
     lines = ["Layers"]
+    max_activations = max(summary.activation_count for summary in scan.layers)
     for summary in scan.layers:
         lines.append(
-            f"- {summary.layer_id}: activations={summary.activation_count}, "
+            f"- {summary.layer_id}: {_bar(summary.activation_count, max_activations)} "
+            f"activations={summary.activation_count}, "
             f"features={summary.feature_count}"
         )
     return "\n".join(lines)
@@ -434,14 +436,24 @@ def _statistics_summary_text(scan: ScanResult) -> str:
     if not scan.layers:
         return "No layer statistics available."
     lines = ["Statistics"]
+    numeric_values = [
+        abs(float(statistic.value))
+        for summary in scan.layers
+        for statistic in summary.statistics
+        if isinstance(statistic.value, int | float)
+    ]
+    max_value = max(numeric_values, default=0.0)
     for summary in scan.layers:
         if not summary.statistics:
             lines.append(f"- {summary.layer_id}: no statistics")
             continue
         for statistic in summary.statistics:
+            bar = ""
+            if isinstance(statistic.value, int | float):
+                bar = f" {_bar(abs(float(statistic.value)), max_value)}"
             lines.append(
                 f"- {summary.layer_id} {statistic.metric}: "
-                f"{statistic.value:.6g} over {statistic.sample_count} samples"
+                f"{statistic.value:.6g}{bar} over {statistic.sample_count} samples"
             )
     return "\n".join(lines)
 
@@ -462,7 +474,17 @@ def _diagnostic_evidence_text(scan: ScanResult) -> str:
 def _diagnostic_summary_text(scan: ScanResult) -> str:
     if not scan.diagnostics:
         return "No diagnostics available."
-    lines = ["Diagnostics"]
+    severity_counts = {
+        "critical": sum(1 for item in scan.diagnostics if item.severity == "critical"),
+        "warning": sum(1 for item in scan.diagnostics if item.severity == "warning"),
+        "info": sum(1 for item in scan.diagnostics if item.severity == "info"),
+    }
+    max_count = max(severity_counts.values(), default=0)
+    lines = ["Diagnostics", "Severity counts"]
+    for severity in ("critical", "warning", "info"):
+        count = severity_counts[severity]
+        lines.append(f"- {_fit(severity.upper(), 8)} {_bar(count, max_count)} {count}")
+    lines.append("")
     for diagnostic in scan.diagnostics:
         lines.append(f"- {diagnostic.severity.upper()}: {diagnostic.conclusion}")
     return "\n".join(lines)
@@ -478,12 +500,22 @@ def _feature_inspection_text(state: AppState) -> str:
         f"Layer: {result.feature.layer_id}",
         f"Feature: {result.feature.feature_id}",
         "",
-        "Metric              Value      Samples",
+        "Metric              Value      Magnitude            Samples",
     ]
+    numeric_values = [
+        abs(float(statistic.value))
+        for statistic in result.feature.statistics
+        if isinstance(statistic.value, int | float)
+    ]
+    max_value = max(numeric_values, default=0.0)
     for statistic in result.feature.statistics:
+        bar = ""
+        if isinstance(statistic.value, int | float):
+            bar = f" {_bar(abs(float(statistic.value)), max_value)}"
         lines.append(
             f"{_fit(statistic.metric, 18)} "
             f"{_number_text(statistic.value):>10} "
+            f"{bar:<20} "
             f"{statistic.sample_count:>8}"
         )
     return "\n".join(lines)
@@ -582,6 +614,15 @@ def _number_text(value: object) -> str:
     if isinstance(value, float):
         return f"{value:.4g}"
     return str(value)
+
+
+def _bar(value: float | int, maximum: float | int, *, width: int = 12) -> str:
+    if maximum <= 0:
+        filled = 0
+    else:
+        filled = round((float(value) / float(maximum)) * width)
+    filled = max(0, min(width, filled))
+    return "[" + ("#" * filled).ljust(width, "-") + "]"
 
 
 def _fit(value: object, width: int) -> str:

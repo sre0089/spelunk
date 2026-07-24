@@ -115,8 +115,10 @@ def test_tui_renders_loaded_run_scan(tmp_path: Path, monkeypatch: MonkeyPatch) -
             layers = str(app.query_one("#layer-summary", Static).render())
             assert "Model: Tiny AE" in content
             assert "Layers with activations: 1" in content
-            assert "encoder: activations=2" in layers
+            assert "encoder: [############] activations=2" in layers
             assert "CRITICAL" in details
+            assert "Severity counts" in details
+            assert "[############] 1" in details
             assert "inactive" in details
 
     asyncio.run(scenario())
@@ -139,7 +141,7 @@ def test_tui_navigation_switches_loaded_run_views(
             content = str(app.query_one("#primary-copy", Static).render())
             details = str(app.query_one("#details-copy", Static).render())
             assert title == "Layers"
-            assert "encoder: activations=2" in content
+            assert "encoder: [############] activations=2" in content
             assert "Statistics" in details
 
     asyncio.run(scenario())
@@ -188,7 +190,8 @@ def test_tui_inspect_feature_action_renders_stats(
             assert title == "Inspect Feature"
             assert "Layer: encoder" in content
             assert "Feature: 0" in content
-            assert "Metric              Value" in content
+            assert "Metric              Value      Magnitude" in content
+            assert "[------------]" in content
             assert "activation_mean" in content
             assert "Top examples" in details
             assert "Rank  Sample" in details
