@@ -267,6 +267,57 @@ def test_capture_direct_flags_require_run() -> None:
     assert "Direct capture requires --run" in result.output
 
 
+def test_quickstart_captures_reports_and_prints_tui_command(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("torch")
+    monkeypatch.setenv("SPELUNK_CONFIG_HOME", str(tmp_path / "config"))
+    np.save(tmp_path / "samples.npy", np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32))
+    model_path = tmp_path / "model_factory.py"
+    model_path.write_text(
+        "\n".join(
+            [
+                "from collections import OrderedDict",
+                "import torch",
+                "",
+                "def build_model():",
+                "    return torch.nn.Sequential(",
+                "        OrderedDict([('encoder', torch.nn.Linear(2, 2, bias=False))])",
+                "    )",
+                "",
+            ]
+        )
+    )
+
+    result = runner.invoke(
+        cli_app.app,
+        [
+            "quickstart",
+            "--run",
+            str(tmp_path / "run-001.spelunk"),
+            "--model-path",
+            str(model_path),
+            "--dataset",
+            str(tmp_path / "samples.npy"),
+            "--layers",
+            "encoder",
+            "--batch-size",
+            "2",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Run: run-001" in result.output
+    assert "Markdown report:" in result.output
+    assert "JSON report:" in result.output
+    assert "Open TUI: spelunk open" in result.output
+    assert (tmp_path / "run-001.spelunk" / "reports" / "report.md").exists()
+    assert (tmp_path / "run-001.spelunk" / "reports" / "report.json").exists()
+    assert load_recent_runs() == ((tmp_path / "run-001.spelunk").resolve(),)
+
+
 def test_layers_lists_model_layer_selectors(tmp_path: Path) -> None:
     pytest.importorskip("torch")
     model_path = tmp_path / "model_factory.py"

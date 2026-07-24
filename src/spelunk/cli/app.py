@@ -207,6 +207,114 @@ def layers(
 
 
 @app.command()
+def quickstart(
+    run: Annotated[
+        Path,
+        typer.Option("--run", help="Output run directory."),
+    ],
+    model_path: Annotated[
+        Path | None,
+        typer.Option("--model-path", help="Python file containing the model factory."),
+    ] = None,
+    model_module: Annotated[
+        str | None,
+        typer.Option("--model-module", help="Importable module containing the model factory."),
+    ] = None,
+    factory: Annotated[
+        str,
+        typer.Option("--factory", help="Model factory callable name."),
+    ] = "build_model",
+    dataset: Annotated[
+        Path | None,
+        typer.Option("--dataset", help="Dataset file or image folder."),
+    ] = None,
+    layer_selectors: Annotated[
+        list[str] | None,
+        typer.Option("--layers", help="Layer selector to capture. Repeat for multiple layers."),
+    ] = None,
+    dataset_kind: Annotated[
+        str | None,
+        typer.Option("--dataset-kind", help="Dataset kind: numpy, csv, jsonl, or image-folder."),
+    ] = None,
+    storage_backend: Annotated[
+        str,
+        typer.Option("--storage-backend", help="Storage backend: numpy-shards or zarr."),
+    ] = "numpy-shards",
+    batch_size: Annotated[
+        int,
+        typer.Option("--batch-size", help="Capture batch size."),
+    ] = 32,
+    max_samples: Annotated[
+        int | None,
+        typer.Option("--max-samples", help="Maximum samples to capture."),
+    ] = None,
+    model_id: Annotated[
+        str,
+        typer.Option("--model-id", help="Model identifier stored in the run manifest."),
+    ] = "model",
+    model_name: Annotated[
+        str | None,
+        typer.Option("--model-name", help="Display name stored in the run manifest."),
+    ] = None,
+    dataset_id: Annotated[
+        str,
+        typer.Option("--dataset-id", help="Dataset identifier stored in the run manifest."),
+    ] = "dataset",
+    dataset_name: Annotated[
+        str | None,
+        typer.Option("--dataset-name", help="Dataset display name stored in the run manifest."),
+    ] = None,
+    checkpoint_id: Annotated[
+        str,
+        typer.Option("--checkpoint-id", help="Checkpoint identifier."),
+    ] = "ckpt-001",
+    checkpoint_label: Annotated[
+        str,
+        typer.Option("--checkpoint-label", help="Checkpoint label."),
+    ] = "initial",
+    open_tui: Annotated[
+        bool,
+        typer.Option("--open/--no-open", help="Open the TUI after reports are generated."),
+    ] = False,
+) -> None:
+    """Capture, scan, report, and optionally open the TUI."""
+    try:
+        capture_config = _capture_config_from_flags(
+            run=run,
+            model_path=model_path,
+            model_module=model_module,
+            factory=factory,
+            dataset=dataset,
+            layer_selectors=tuple(layer_selectors or ()),
+            dataset_kind=dataset_kind,
+            storage_backend=storage_backend,
+            batch_size=batch_size,
+            max_samples=max_samples,
+            model_id=model_id,
+            model_name=model_name,
+            dataset_id=dataset_id,
+            dataset_name=dataset_name,
+            checkpoint_id=checkpoint_id,
+            checkpoint_label=checkpoint_label,
+        )
+        capture_result = run_capture(capture_config)
+        session = Session.open(capture_config.run)
+        scan_result = session.scan()
+        markdown = session.report(format="markdown")
+        json_report = session.report(format="json")
+        remember_recent_run(session.root)
+    except SpelunkError as error:
+        _fail(str(error))
+    _echo_capture_result(capture_result)
+    typer.echo(f"Diagnostics: {len(scan_result.diagnostics)}")
+    typer.echo(f"Markdown report: {markdown.path}")
+    typer.echo(f"JSON report: {json_report.path}")
+    typer.echo(f"Open TUI: spelunk open {session.root}")
+    if open_tui:
+        run_tui(session.root)
+
+
+@app.command()
 def compare(
     left_run: Path,
     right_run: Path,
