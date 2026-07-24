@@ -212,6 +212,61 @@ def test_capture_config_executes_pytorch_capture(tmp_path: Path) -> None:
     assert scan.layers[0].activation_count == 2
 
 
+def test_capture_accepts_direct_workflow_flags(tmp_path: Path) -> None:
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("torch")
+    np.save(tmp_path / "samples.npy", np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32))
+    model_path = tmp_path / "model_factory.py"
+    model_path.write_text(
+        "\n".join(
+            [
+                "from collections import OrderedDict",
+                "import torch",
+                "",
+                "def build_model():",
+                "    return torch.nn.Sequential(",
+                "        OrderedDict([('encoder', torch.nn.Linear(2, 2, bias=False))])",
+                "    )",
+                "",
+            ]
+        )
+    )
+
+    result = runner.invoke(
+        cli_app.app,
+        [
+            "capture",
+            "--run",
+            str(tmp_path / "run-001.spelunk"),
+            "--model-path",
+            str(model_path),
+            "--factory",
+            "build_model",
+            "--dataset",
+            str(tmp_path / "samples.npy"),
+            "--layers",
+            "encoder",
+            "--batch-size",
+            "2",
+            "--max-samples",
+            "2",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Run: run-001" in result.output
+    assert "Layers: encoder" in result.output
+    scan = Session.open(tmp_path / "run-001.spelunk").scan()
+    assert scan.layers[0].layer_id == "encoder"
+
+
+def test_capture_direct_flags_require_run() -> None:
+    result = runner.invoke(cli_app.app, ["capture", "--layers", "encoder"])
+
+    assert result.exit_code == 1
+    assert "Direct capture requires --run" in result.output
+
+
 def test_layers_lists_model_layer_selectors(tmp_path: Path) -> None:
     pytest.importorskip("torch")
     model_path = tmp_path / "model_factory.py"

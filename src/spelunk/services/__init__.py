@@ -1,6 +1,6 @@
 """Application services shared by CLI, TUI, and future clients."""
 
-from spelunk.services.capture_config import run_capture_config
+from spelunk.services.capture_config import run_capture, run_capture_config
 from spelunk.services.results import (
     CapturePlan,
     CaptureResult,
@@ -21,5 +21,6 @@ __all__ = [
     "RunSummary",
     "ScanResult",
     "Session",
+    "run_capture",
     "run_capture_config",
 ]

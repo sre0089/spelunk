@@ -10,16 +10,17 @@ import typer
 
 from spelunk import __version__
 from spelunk.adapters.pytorch import PyTorchAdapter
-from spelunk.config import remember_recent_run
+from spelunk.config import CaptureConfig, remember_recent_run
 from spelunk.errors import SpelunkError
-from spelunk.services import Session, run_capture_config
+from spelunk.services import Session, run_capture, run_capture_config
 from spelunk.services.results import (
+    CaptureResult,
     ComparisonResult,
     FeatureInspectionResult,
     RunSummary,
     ScanResult,
 )
-from spelunk.services.workflow import load_model
+from spelunk.services.workflow import build_capture_config, load_model
 from spelunk.tui import run_tui
 
 app = typer.Typer(
@@ -69,12 +70,106 @@ def scan(
 
 
 @app.command()
-def capture(config: Path) -> None:
-    """Capture activations from a capture configuration file."""
+def capture(
+    config: Annotated[
+        Path | None,
+        typer.Argument(help="Capture config path. Optional when direct flags are used."),
+    ] = None,
+    run: Annotated[
+        Path | None,
+        typer.Option("--run", help="Output run directory."),
+    ] = None,
+    model_path: Annotated[
+        Path | None,
+        typer.Option("--model-path", help="Python file containing the model factory."),
+    ] = None,
+    model_module: Annotated[
+        str | None,
+        typer.Option("--model-module", help="Importable module containing the model factory."),
+    ] = None,
+    factory: Annotated[
+        str,
+        typer.Option("--factory", help="Model factory callable name."),
+    ] = "build_model",
+    dataset: Annotated[
+        Path | None,
+        typer.Option("--dataset", help="Dataset file or image folder."),
+    ] = None,
+    layer_selectors: Annotated[
+        list[str] | None,
+        typer.Option("--layers", help="Layer selector to capture. Repeat for multiple layers."),
+    ] = None,
+    dataset_kind: Annotated[
+        str | None,
+        typer.Option("--dataset-kind", help="Dataset kind: numpy, csv, jsonl, or image-folder."),
+    ] = None,
+    storage_backend: Annotated[
+        str,
+        typer.Option("--storage-backend", help="Storage backend: numpy-shards or zarr."),
+    ] = "numpy-shards",
+    batch_size: Annotated[
+        int,
+        typer.Option("--batch-size", help="Capture batch size."),
+    ] = 32,
+    max_samples: Annotated[
+        int | None,
+        typer.Option("--max-samples", help="Maximum samples to capture."),
+    ] = None,
+    model_id: Annotated[
+        str,
+        typer.Option("--model-id", help="Model identifier stored in the run manifest."),
+    ] = "model",
+    model_name: Annotated[
+        str | None,
+        typer.Option("--model-name", help="Display name stored in the run manifest."),
+    ] = None,
+    dataset_id: Annotated[
+        str,
+        typer.Option("--dataset-id", help="Dataset identifier stored in the run manifest."),
+    ] = "dataset",
+    dataset_name: Annotated[
+        str | None,
+        typer.Option("--dataset-name", help="Dataset display name stored in the run manifest."),
+    ] = None,
+    checkpoint_id: Annotated[
+        str,
+        typer.Option("--checkpoint-id", help="Checkpoint identifier."),
+    ] = "ckpt-001",
+    checkpoint_label: Annotated[
+        str,
+        typer.Option("--checkpoint-label", help="Checkpoint label."),
+    ] = "initial",
+) -> None:
+    """Capture activations from config or direct workflow flags."""
     try:
-        result = run_capture_config(config)
+        if config is not None:
+            result = run_capture_config(config)
+        else:
+            capture_config = _capture_config_from_flags(
+                run=run,
+                model_path=model_path,
+                model_module=model_module,
+                factory=factory,
+                dataset=dataset,
+                layer_selectors=tuple(layer_selectors or ()),
+                dataset_kind=dataset_kind,
+                storage_backend=storage_backend,
+                batch_size=batch_size,
+                max_samples=max_samples,
+                model_id=model_id,
+                model_name=model_name,
+                dataset_id=dataset_id,
+                dataset_name=dataset_name,
+                checkpoint_id=checkpoint_id,
+                checkpoint_label=checkpoint_label,
+            )
+            result = run_capture(capture_config)
     except SpelunkError as error:
         _fail(str(error))
+    _echo_capture_result(result)
+
+
+def _echo_capture_result(result: CaptureResult) -> None:
     typer.echo(f"Run: {result.run.run_id}")
     typer.echo(f"Checkpoint: {result.checkpoint_id}")
     typer.echo(f"Layers: {', '.join(str(layer) for layer in result.captured_layers)}")
@@ -201,6 +296,51 @@ def _compare_or_fail(left: Session, right: Session) -> ComparisonResult:
         _fail(str(error))
 
 
+def _capture_config_from_flags(
+    *,
+    run: Path | None,
+    model_path: Path | None,
+    model_module: str | None,
+    factory: str,
+    dataset: Path | None,
+    layer_selectors: tuple[str, ...],
+    dataset_kind: str | None,
+    storage_backend: str,
+    batch_size: int,
+    max_samples: int | None,
+    model_id: str,
+    model_name: str | None,
+    dataset_id: str,
+    dataset_name: str | None,
+    checkpoint_id: str,
+    checkpoint_label: str,
+) -> CaptureConfig:
+    if run is None:
+        raise SpelunkError("Direct capture requires --run.")
+    if model_path is None and model_module is None:
+        raise SpelunkError("Direct capture requires --model-path or --model-module.")
+    if dataset is None:
+        raise SpelunkError("Direct capture requires --dataset.")
+    return build_capture_config(
+        run=run,
+        model_path=model_path,
+        model_module=model_module,
+        factory=factory,
+        dataset=dataset,
+        layers=layer_selectors,
+        storage_backend=storage_backend,
+        model_id=model_id,
+        model_name=model_name or _default_model_name(model_path, model_module),
+        dataset_id=dataset_id,
+        dataset_name=dataset_name or dataset.stem,
+        dataset_kind=dataset_kind,
+        checkpoint_id=checkpoint_id,
+        checkpoint_label=checkpoint_label,
+        batch_size=batch_size,
+        max_samples=max_samples,
+    )
+
+
 def _fail(message: str) -> NoReturn:
     typer.echo(f"Error: {message}")
     raise typer.Exit(code=1)
@@ -218,6 +358,14 @@ def _echo_summary(summary: RunSummary) -> None:
     typer.echo(f"Dataset: {summary.dataset.name}")
     typer.echo(f"Checkpoints: {summary.checkpoint_count}")
     typer.echo(f"Layers: {summary.layer_count}")
+
+
+def _default_model_name(model_path: Path | None, model_module: str | None) -> str:
+    if model_path is not None:
+        return model_path.stem
+    if model_module is not None:
+        return model_module.rsplit(".", maxsplit=1)[-1]
+    return "model"
 
 
 def _scan_to_json(result: ScanResult) -> dict[str, object]:

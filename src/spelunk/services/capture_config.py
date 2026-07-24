@@ -19,6 +19,11 @@ from spelunk.services.workflow import load_model_factory
 def run_capture_config(path: str | Path) -> CaptureResult:
     """Execute a local capture configuration file."""
     config = load_capture_config(path)
+    return run_capture(config)
+
+
+def run_capture(config: CaptureConfig) -> CaptureResult:
+    """Execute a loaded capture configuration."""
     if config.model.framework != "pytorch":
         raise UnsupportedOperationError(f"Unsupported capture framework: {config.model.framework}")
     _ensure_new_run(config)
