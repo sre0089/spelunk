@@ -10,6 +10,7 @@ from spelunk.domain import CheckpointId, DatasetId, DatasetRef, LayerId, ModelId
 from spelunk.services import Session
 from spelunk.storage import NumpyShardActivationStore
 from spelunk.tui import SpelunkApp
+from spelunk.tui.widgets import MarkdownViewer
 
 
 def test_tui_project_picker_renders(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -156,10 +157,10 @@ def test_tui_generate_reports_action_writes_artifacts(
         async with app.run_test() as pilot:
             await pilot.press("r")
             await pilot.pause()
-            content = str(app.query_one("#primary-copy", Static).render())
+            viewer = app.query_one("#primary-copy", MarkdownViewer)
             details = str(app.query_one("#details-copy", Static).render())
-            assert "# Spelunk report for run-001" in content
-            assert "## Diagnostics" in content
+            assert "# Spelunk report for run-001" in viewer.markdown_source
+            assert "## Diagnostics" in viewer.markdown_source
             assert "Generated report.md and report.json" in details
             assert "Markdown:" in details
             assert "JSON:" in details

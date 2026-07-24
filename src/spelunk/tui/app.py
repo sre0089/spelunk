@@ -14,7 +14,7 @@ from spelunk.services import Session
 from spelunk.services.results import ScanResult
 from spelunk.tui.screens import CommandPaletteScreen, ShortcutOverlayScreen
 from spelunk.tui.state import AppState
-from spelunk.tui.widgets import Breadcrumbs, StatusBar
+from spelunk.tui.widgets import Breadcrumbs, MarkdownViewer, StatusBar
 
 
 class SpelunkApp(App[None]):
@@ -238,7 +238,11 @@ class SpelunkApp(App[None]):
         self.breadcrumbs.update_state(self.app_state)
         self.status.update_state(self.app_state)
         self.query_one("#primary-title", Static).update(_primary_title_text(self.app_state))
-        self.query_one("#primary-copy", Static).update(_primary_copy_text(self.app_state))
+        primary = self.query_one("#primary-copy", MarkdownViewer)
+        if self.app_state.selected_mode == "reports" and self.app_state.report_markdown:
+            primary.update_markdown(self.app_state.report_markdown)
+        else:
+            primary.update_text(_primary_copy_text(self.app_state))
         self.query_one("#layer-summary", Static).update(_secondary_content_text(self.app_state))
         self.query_one("#details-copy", Static).update(_details_text(self.app_state))
 
@@ -284,18 +288,26 @@ class SpelunkApp(App[None]):
     def _content(self) -> ComposeResult:
         if self.app_state.error_message is not None:
             yield Static("Project Picker", classes="panel-title", id="primary-title")
-            yield Static(f"Could not open run: {self.app_state.error_message}", id="primary-copy")
+            yield MarkdownViewer(
+                f"Could not open run: {self.app_state.error_message}",
+                id="primary-copy",
+            )
             return
         if self.app_state.scan_result is None:
             yield Static("Project Picker", classes="panel-title", id="primary-title")
-            yield Static(
+            yield MarkdownViewer(
                 _project_picker_text(self.app_state),
                 id="primary-copy",
             )
             return
 
         yield Static(_primary_title_text(self.app_state), classes="panel-title", id="primary-title")
-        yield Static(_primary_copy_text(self.app_state), id="primary-copy")
+        primary = MarkdownViewer(id="primary-copy")
+        if self.app_state.selected_mode == "reports" and self.app_state.report_markdown:
+            primary.update_markdown(self.app_state.report_markdown)
+        else:
+            primary.update_text(_primary_copy_text(self.app_state))
+        yield primary
         yield Static(_secondary_content_text(self.app_state), id="layer-summary")
 
     def _details(self) -> ComposeResult:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from rich.markdown import Markdown
 from textual.widgets import Static
 
 from spelunk.tui.state import AppState
@@ -19,3 +20,18 @@ class StatusBar(Static):
             f"mode={state.selected_mode} | run={run} | capture={state.capture_status} | ? help"
         )
 
+
+class MarkdownViewer(Static):
+    """Static pane that can switch between plain text and Rich Markdown."""
+
+    def __init__(self, content: str = "", **kwargs: object) -> None:
+        super().__init__(content, **kwargs)
+        self.markdown_source = ""
+
+    def update_text(self, text: str) -> None:
+        self.markdown_source = ""
+        self.update(text)
+
+    def update_markdown(self, source: str) -> None:
+        self.markdown_source = source
+        self.update(Markdown(source))
