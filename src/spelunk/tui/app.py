@@ -214,7 +214,14 @@ class SpelunkApp(App[None]):
         self._refresh_loaded_run_view()
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
-        if event.list_view.id != "project-actions" or self.app_state.scan_result is None:
+        if event.list_view.id != "project-actions":
+            return
+        if self.app_state.scan_result is None:
+            recent_path = _recent_run_from_item_id(event.item.id, self.app_state.recent_runs)
+            if recent_path is None:
+                return
+            self._load_run(recent_path)
+            self.refresh(recompose=True)
             return
         selected_mode = _mode_from_item_id(event.item.id)
         if selected_mode is None:
@@ -258,7 +265,7 @@ class SpelunkApp(App[None]):
     def _navigation(self) -> ListView:
         if self.app_state.scan_result is None:
             recent_items = [
-                ListItem(Label(str(path)), id=f"recent-run-{index}")
+                ListItem(Label(_recent_run_label(path)), id=f"recent-run-{index}")
                 for index, path in enumerate(self.app_state.recent_runs)
             ]
             if not recent_items:
@@ -318,7 +325,7 @@ def _project_picker_text(state: AppState) -> str:
         return "Open a run with `spelunk open RUN` to add it to recent runs."
     lines = ["Recent runs"]
     for path in state.recent_runs:
-        lines.append(f"- {path}")
+        lines.append(f"- {_recent_run_label(path)}")
     return "\n".join(lines)
 
 
@@ -583,3 +590,20 @@ def _mode_from_item_id(item_id: str | None) -> str | None:
         "compare-action": "compare",
         "reports-action": "reports",
     }.get(item_id)
+
+
+def _recent_run_label(path: Path) -> str:
+    return f"{path.stem}  {path}"
+
+
+def _recent_run_from_item_id(item_id: str | None, recent_runs: tuple[Path, ...]) -> Path | None:
+    if item_id is None or not item_id.startswith("recent-run-"):
+        return None
+    index_text = item_id.removeprefix("recent-run-")
+    try:
+        index = int(index_text)
+    except ValueError:
+        return None
+    if index < 0 or index >= len(recent_runs):
+        return None
+    return recent_runs[index]

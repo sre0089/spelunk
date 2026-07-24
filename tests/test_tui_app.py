@@ -42,8 +42,30 @@ def test_tui_project_picker_renders_recent_runs(
             await pilot.pause()
             content = str(app.query_one("#primary-copy", Static).render())
             titles = [str(widget.render()) for widget in app.screen.query(Label)]
+            assert "run-001" in content
             assert str(run.resolve()) in content
             assert any(str(run.resolve()) in title for title in titles)
+
+    asyncio.run(scenario())
+
+
+def test_tui_project_picker_opens_recent_run(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SPELUNK_CONFIG_HOME", str(tmp_path / "config"))
+    run = _run_with_activations(tmp_path)
+    remember_recent_run(run)
+
+    async def scenario() -> None:
+        app = SpelunkApp()
+        async with app.run_test() as pilot:
+            await pilot.press("enter")
+            await pilot.pause()
+            title = str(app.query_one("#primary-title", Static).render())
+            content = str(app.query_one("#primary-copy", Static).render())
+            assert title == "Run run-001"
+            assert "Model: Tiny AE" in content
 
     asyncio.run(scenario())
 
