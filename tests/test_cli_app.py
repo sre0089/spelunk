@@ -212,6 +212,44 @@ def test_capture_config_executes_pytorch_capture(tmp_path: Path) -> None:
     assert scan.layers[0].activation_count == 2
 
 
+def test_layers_lists_model_layer_selectors(tmp_path: Path) -> None:
+    pytest.importorskip("torch")
+    model_path = tmp_path / "model_factory.py"
+    model_path.write_text(
+        "\n".join(
+            [
+                "from collections import OrderedDict",
+                "import torch",
+                "",
+                "def build_model():",
+                "    return torch.nn.Sequential(",
+                "        OrderedDict([",
+                "            ('encoder', torch.nn.Linear(2, 2)),",
+                "            ('relu', torch.nn.ReLU()),",
+                "        ])",
+                "    )",
+                "",
+            ]
+        )
+    )
+
+    result = runner.invoke(
+        cli_app.app,
+        ["layers", "--model-path", str(model_path), "--factory", "build_model"],
+    )
+
+    assert result.exit_code == 0
+    assert "encoder\tLinear" in result.output
+    assert "relu\tReLU" in result.output
+
+
+def test_layers_requires_model_source() -> None:
+    result = runner.invoke(cli_app.app, ["layers"])
+
+    assert result.exit_code == 1
+    assert "Model loading requires either --model-path or --model-module" in result.output
+
+
 def test_capture_config_refuses_existing_run(tmp_path: Path) -> None:
     np = pytest.importorskip("numpy")
     pytest.importorskip("torch")

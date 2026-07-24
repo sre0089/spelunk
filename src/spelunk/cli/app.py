@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Literal, NoReturn, cast
+from typing import Annotated, Literal, NoReturn, cast
 
 import typer
 
 from spelunk import __version__
+from spelunk.adapters.pytorch import PyTorchAdapter
 from spelunk.config import remember_recent_run
 from spelunk.errors import SpelunkError
 from spelunk.services import Session, run_capture_config
@@ -18,6 +19,7 @@ from spelunk.services.results import (
     RunSummary,
     ScanResult,
 )
+from spelunk.services.workflow import load_model
 from spelunk.tui import run_tui
 
 app = typer.Typer(
@@ -78,6 +80,35 @@ def capture(config: Path) -> None:
     typer.echo(f"Layers: {', '.join(str(layer) for layer in result.captured_layers)}")
     typer.echo(f"Samples: {result.captured_samples}")
     typer.echo(f"Batches: {result.batch_count}")
+
+
+@app.command()
+def layers(
+    model_path: Annotated[
+        Path | None,
+        typer.Option("--model-path", help="Python file containing the model factory."),
+    ] = None,
+    model_module: Annotated[
+        str | None,
+        typer.Option("--model-module", help="Importable module containing the model factory."),
+    ] = None,
+    factory: Annotated[
+        str,
+        typer.Option("--factory", help="Model factory callable name."),
+    ] = "build_model",
+) -> None:
+    """List valid PyTorch layer selectors for capture."""
+    try:
+        model = load_model(module=model_module, path=model_path, factory=factory)
+        description = PyTorchAdapter(model).describe_model()
+    except (SpelunkError, RuntimeError, TypeError) as error:
+        _fail(str(error))
+    if not description.layers:
+        typer.echo("No named layers found.")
+        return
+    for layer in description.layers:
+        shape = "x".join(str(part) for part in layer.shape) if layer.shape else "-"
+        typer.echo(f"{layer.path}\t{layer.kind}\tshape={shape}\trole={layer.role}")
 
 
 @app.command()

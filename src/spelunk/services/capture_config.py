@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import importlib
-import importlib.util
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, cast
@@ -15,6 +13,7 @@ from spelunk.domain import Checkpoint, DatasetRef
 from spelunk.errors import SpelunkError, UnsupportedOperationError
 from spelunk.services.results import CaptureResult
 from spelunk.services.session import Session
+from spelunk.services.workflow import load_model_factory
 
 
 def run_capture_config(path: str | Path) -> CaptureResult:
@@ -91,31 +90,13 @@ def _ensure_new_run(config: CaptureConfig) -> None:
 
 
 def _load_model(config: CaptureConfig) -> Any:
-    factory = _load_factory(config)
+    factory = load_model_factory(
+        module=config.model.module,
+        path=config.model.path,
+        factory=config.model.factory,
+    )
     model = factory()
     return model
-
-
-def _load_factory(config: CaptureConfig) -> Any:
-    if config.model.path is not None:
-        module = _load_module_from_path(config.model.path)
-    elif config.model.module is not None:
-        module = importlib.import_module(config.model.module)
-    else:
-        raise SpelunkError("Capture config model requires either module or path")
-    factory = getattr(module, config.model.factory, None)
-    if not callable(factory):
-        raise SpelunkError(f"Model factory is not callable: {config.model.factory}")
-    return factory
-
-
-def _load_module_from_path(path: Path) -> Any:
-    spec = importlib.util.spec_from_file_location("spelunk_capture_model", path)
-    if spec is None or spec.loader is None:
-        raise SpelunkError(f"Could not load model module: {path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def _tensor_input_converter(samples: Sequence[DatasetSample]) -> Any:
