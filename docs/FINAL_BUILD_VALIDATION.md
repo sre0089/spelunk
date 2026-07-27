@@ -33,6 +33,17 @@ Installed the wheel into `/tmp/spelunk-m48-clean-venv` and verified:
 - `spelunk capture --help` exposes config-free capture flags
 - `import spelunk` exposes `spelunk.capture`
 
+## TestPyPI Smoke
+
+TestPyPI upload and install were validated with temporary distribution name `spelunk-sre0089` because `spelunk` is already owned by another account on TestPyPI.
+
+Verified after installing `spelunk-sre0089==0.1.0a1` from TestPyPI:
+
+- `spelunk --version`
+- `spelunk doctor`
+- `spelunk capture --help`
+- `import spelunk`
+
 ## Publish Gate
 
-No TestPyPI or PyPI upload has been performed. Publishing requires explicit owner approval and credentials.
+No real PyPI upload has been performed. Publishing requires explicit owner approval and credentials.

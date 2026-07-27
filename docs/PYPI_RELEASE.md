@@ -21,6 +21,8 @@ python -m twine check dist/spelunk-0.1.0a1*
 
 ## TestPyPI
 
+The `spelunk` name is already owned by another account on TestPyPI. For TestPyPI-only validation, temporarily set `pyproject.toml` project name to `spelunk-sre0089`, rebuild, upload, install, then restore the project name to `spelunk` before real PyPI.
+
 Use TestPyPI before the real upload:
 
 ```bash
@@ -33,6 +35,12 @@ Verify install:
 python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ spelunk==0.1.0a1
 spelunk --version
 spelunk doctor
+```
+
+For the validated temporary TestPyPI name:
+
+```bash
+python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ spelunk-sre0089==0.1.0a1
 ```
 
 ## PyPI
