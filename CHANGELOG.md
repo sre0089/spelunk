@@ -2,7 +2,7 @@
 
 ## 0.1.0a1
 
-First pre-alpha release candidate.
+First published pre-alpha release.
 
 ### Added
 

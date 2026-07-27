@@ -146,6 +146,8 @@ Spelunk is a pre-alpha release. It is useful for local activation capture and in
 - [Storage Format](docs/STORAGE_FORMAT.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Contributing](docs/CONTRIBUTING.md)
+- [Support](SUPPORT.md)
+- [Security](SECURITY.md)
 
 ## Development
 
