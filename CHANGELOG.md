@@ -32,4 +32,5 @@ First pre-alpha release candidate.
 - Checkpoint file loading is not implemented yet.
 - Diagnostics are limited to activation health.
 - PyPI distribution name is `spelunk-ml`; the CLI and import name remain `spelunk`.
+- Published to PyPI as `spelunk-ml`.
 - No Homebrew publish has been performed yet.

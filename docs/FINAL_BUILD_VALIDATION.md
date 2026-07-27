@@ -47,4 +47,17 @@ Verified after installing `spelunk-sre0089==0.1.0a1` from TestPyPI:
 
 ## Publish Gate
 
-No real PyPI upload has been performed. Publishing requires explicit owner approval and credentials. The real PyPI distribution name is `spelunk-ml`.
+## PyPI Smoke
+
+Published to real PyPI as `spelunk-ml==0.1.0a1`.
+
+Installed from PyPI into `/tmp/spelunk-pypi-venv` and verified:
+
+- `spelunk --version` prints `0.1.0a1`
+- `spelunk doctor` reports the package importable
+- `spelunk capture --help` exposes config-free capture flags
+- `import spelunk` exposes `spelunk.capture`
+
+## Remaining Release Work
+
+Homebrew formula and tap publishing have not been performed.

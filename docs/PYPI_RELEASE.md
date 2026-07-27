@@ -1,6 +1,6 @@
 # PyPI Release Prep
 
-This project is prepared for a `0.1.0a1` pre-alpha release, but publishing must be explicitly approved.
+This project was published to PyPI as `spelunk-ml==0.1.0a1`.
 
 ## Build
 
@@ -45,7 +45,7 @@ python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-ur
 
 ## PyPI
 
-Publish only after TestPyPI verification:
+Published with:
 
 ```bash
 python -m twine upload dist/spelunk_ml-0.1.0a1*
@@ -63,7 +63,7 @@ spelunk doctor
 
 Use `CHANGELOG.md` section `0.1.0a1` as the release notes source.
 
-## Do Not Publish Until
+## Publish Requirements
 
 - owner approves the publish
 - `pytest`, `ruff`, `mypy`, `build`, and `twine check` pass
