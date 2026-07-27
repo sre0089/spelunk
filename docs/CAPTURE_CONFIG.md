@@ -75,6 +75,10 @@ def build_model() -> torch.nn.Module:
 
 Layer names come from `model.named_modules()`. If `layers = ["encoder"]`, the returned model must have a named module at `encoder`.
 
+## When To Use A Config
+
+Use direct flags or `spelunk quickstart` for exploration. Use a config when you want a repeatable capture plan that can be reviewed, committed, or run in CI.
+
 ## Workflow
 
 Capture activations:

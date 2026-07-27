@@ -1,6 +1,8 @@
 # Example Smoke Workflow
 
-This workflow exercises the current pre-release path end to end.
+This workflow exercises Spelunk end to end using the files in `examples/`.
+
+## Quickstart Path
 
 Generate the example dataset:
 
@@ -8,47 +10,21 @@ Generate the example dataset:
 python examples/generate_samples.py
 ```
 
-Capture activations:
+Discover layers:
 
 ```bash
-spelunk capture examples/capture.json
+spelunk layers --model-path examples/model_factory.py --factory build_model
 ```
 
-Scan the run:
+Capture, scan, and generate reports:
 
 ```bash
-spelunk scan runs/tiny-autoencoder.spelunk
-spelunk scan runs/tiny-autoencoder.spelunk --json
-```
-
-Inspect a feature:
-
-```bash
-spelunk inspect runs/tiny-autoencoder.spelunk --layer encoder --feature 0
-```
-
-Generate reports:
-
-```bash
-spelunk report runs/tiny-autoencoder.spelunk --format markdown
-spelunk report runs/tiny-autoencoder.spelunk --format json
-```
-
-Compare against a second run:
-
-```bash
-cp examples/capture.json examples/capture-2.json
-python - <<'PY'
-from pathlib import Path
-path = Path("examples/capture-2.json")
-text = path.read_text().replace(
-    "../runs/tiny-autoencoder.spelunk",
-    "../runs/tiny-autoencoder-2.spelunk",
-)
-path.write_text(text)
-PY
-spelunk capture examples/capture-2.json
-spelunk compare runs/tiny-autoencoder.spelunk runs/tiny-autoencoder-2.spelunk
+spelunk quickstart \
+  --run runs/tiny-autoencoder.spelunk \
+  --model-path examples/model_factory.py \
+  --factory build_model \
+  --dataset examples/samples.npy \
+  --layers encoder
 ```
 
 Open the TUI:
@@ -56,3 +32,23 @@ Open the TUI:
 ```bash
 spelunk open runs/tiny-autoencoder.spelunk
 ```
+
+## CLI Checks
+
+```bash
+spelunk scan runs/tiny-autoencoder.spelunk
+spelunk inspect runs/tiny-autoencoder.spelunk --layer encoder --feature 0
+spelunk report runs/tiny-autoencoder.spelunk --format markdown
+spelunk report runs/tiny-autoencoder.spelunk --format json
+```
+
+## Config Path
+
+The examples also include JSON and TOML capture configs:
+
+```bash
+spelunk capture examples/capture.json
+spelunk capture examples/capture.toml
+```
+
+Each capture config writes to its configured `run` path. The run path must not already exist.

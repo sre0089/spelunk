@@ -14,6 +14,7 @@ Start here if you are using Spelunk for the first time.
 ## Examples
 
 - [Example Smoke Workflow](EXAMPLE_SMOKE.md): runnable local workflow using `examples/`.
+- [`examples/README.md`](../examples/README.md): quick map of bundled example files.
 - [`examples/model_factory.py`](../examples/model_factory.py): tiny PyTorch model factory.
 - [`examples/generate_samples.py`](../examples/generate_samples.py): tiny NumPy dataset generator.
 - [`examples/capture.json`](../examples/capture.json): JSON capture config.
