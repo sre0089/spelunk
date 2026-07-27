@@ -1,59 +1,32 @@
 # Spelunk
 
-Spelunk is a terminal-native toolkit for inspecting learned representations. It captures PyTorch activations, stores them locally, computes layer and feature statistics, runs diagnostics, compares runs, and exports Markdown or JSON reports.
+Spelunk is a terminal-native tool for inspecting learned representations. It captures PyTorch activations, stores them locally, computes layer and feature statistics, runs activation health diagnostics, compares runs, and opens everything in a TUI built for fast inspection.
 
-The current release target is a local-first pre-alpha for researchers who are comfortable using a Python model factory and CLI workflow.
-
-## Install
-
-From PyPI:
+Install the package named `spelunk-ml`; use the command and Python import named `spelunk`.
 
 ```bash
 python -m pip install spelunk-ml
 ```
 
-From Homebrew:
-
 ```bash
-brew tap sre0089/spelunk
-brew install spelunk-ml
-```
-
-From a checkout:
-
-```bash
-python -m pip install -e ".[dev,arrays,datasets,tui]"
-```
-
-Add PyTorch support when you want to capture activations:
-
-```bash
-python -m pip install -e ".[pytorch]"
-```
-
-Run checks:
-
-```bash
-python -m pytest
-python -m ruff check .
-python -m mypy
+brew install sre0089/spelunk/spelunk-ml
 ```
 
 ## Quickstart
 
-Generate the example dataset:
+Create a tiny dataset and model from the examples:
 
 ```bash
 python examples/generate_samples.py
 ```
 
-Discover valid layer selectors from a PyTorch model factory:
+Discover captureable PyTorch layer names:
 
 ```bash
 spelunk layers --model-path examples/model_factory.py --factory build_model
 ```
 
-Run the lowest-friction workflow:
+Run capture, scan, and report generation in one command:
 
 ```bash
 spelunk quickstart \
@@ -64,126 +37,119 @@ spelunk quickstart \
   --layers encoder
 ```
 
-Or capture directly from flags:
-
-```bash
-spelunk capture \
-  --run runs/tiny-autoencoder.spelunk \
-  --model-path examples/model_factory.py \
-  --factory build_model \
-  --dataset examples/samples.npy \
-  --layers encoder
-```
-
-For reproducible workflows, generate or edit a config:
-
-```bash
-spelunk init --model-path model_factory.py --dataset samples.npy --layers encoder
-spelunk capture examples/capture.json
-```
-
-Scan the captured run:
-
-```bash
-spelunk scan runs/tiny-autoencoder.spelunk
-spelunk scan runs/tiny-autoencoder.spelunk --json
-```
-
-Inspect one feature:
-
-```bash
-spelunk inspect runs/tiny-autoencoder.spelunk --layer encoder --feature 0
-spelunk inspect runs/tiny-autoencoder.spelunk --layer encoder --feature 0 --json
-```
-
-Generate reports:
-
-```bash
-spelunk report runs/tiny-autoencoder.spelunk --format markdown
-spelunk report runs/tiny-autoencoder.spelunk --format json
-```
-
-Compare two runs:
-
-```bash
-spelunk compare runs/baseline.spelunk runs/experiment.spelunk
-spelunk compare runs/baseline.spelunk runs/experiment.spelunk --json
-```
-
 Open the TUI:
 
 ```bash
-spelunk
 spelunk open runs/tiny-autoencoder.spelunk
 ```
 
-## Capture Configs
+Useful TUI shortcuts:
 
-Capture configs are JSON or TOML files. See:
-
-- `examples/capture.json`
-- `examples/capture.toml`
-- `examples/model_factory.py`
-- `docs/CAPTURE_CONFIG.md`
-- `docs/EXAMPLE_SMOKE.md`
-
-The model factory must be callable with no arguments and return a `torch.nn.Module`. Layer names in the capture config are PyTorch `named_modules()` paths.
-
-## Python API
-
-```python
-from spelunk import Session
-
-session = Session.open("runs/tiny-autoencoder.spelunk")
-scan = session.scan()
-feature = session.inspect_feature(layer_id="encoder", feature_id="0")
-report = session.report(format="markdown")
+```text
+i   inspect a feature
+c   compare with another recent run
+r   generate and preview reports
+?   shortcuts
+q   quit
 ```
 
-See `docs/PYTHON_API.md`.
+## What You Can Do
 
-## What Works Today
+- Discover valid PyTorch layer selectors before capture.
+- Capture activations from CLI flags, JSON/TOML configs, or Python.
+- Store activations as NumPy shards or Zarr.
+- Scan runs for layer statistics and activation health diagnostics.
+- Inspect feature statistics and top examples.
+- Compare runs and see metric deltas.
+- Generate Markdown and JSON reports.
+- Browse runs, reports, comparisons, and diagnostics in the TUI.
 
-- layer discovery for PyTorch model factories
-- direct flag-based capture
-- one-shot quickstart capture, scan, and report generation
-- starter config generation
-- JSON and TOML capture configs
-- Spelunk-owned dataset loading for NumPy, CSV, JSONL, and image folders
-- PyTorch activation capture through selected forward hooks
-- NumPy shard and Zarr activation stores
-- layer statistics
-- feature statistics and top examples
-- activation health diagnostics
-- run comparison
-- Markdown and JSON reports
-- Textual TUI shell with run overview, layers, diagnostics, reports, and report generation
+## Common Workflows
 
-## Current Limitations
+Capture directly from flags:
 
-- capture requires a local PyTorch model factory
-- model loading does not handle checkpoint files directly yet
-- PyPI/Homebrew distribution name is `spelunk-ml`; the CLI and import name remain `spelunk`
-- diagnostics are intentionally limited to activation health for now
+```bash
+spelunk capture \
+  --run runs/experiment.spelunk \
+  --model-path model_factory.py \
+  --dataset samples.npy \
+  --layers encoder \
+  --layers bottleneck
+```
+
+Create a reproducible config:
+
+```bash
+spelunk init \
+  --output spelunk.json \
+  --run runs/experiment.spelunk \
+  --model-path model_factory.py \
+  --dataset samples.npy \
+  --layers encoder
+
+spelunk capture spelunk.json
+```
+
+Inspect from the CLI:
+
+```bash
+spelunk scan runs/experiment.spelunk
+spelunk inspect runs/experiment.spelunk --layer encoder --feature 0
+spelunk report runs/experiment.spelunk --format markdown
+```
+
+Capture from Python:
+
+```python
+import numpy as np
+import spelunk
+
+samples = np.load("samples.npy")
+
+result = spelunk.capture(
+    model=model,
+    dataset=samples,
+    layers=["encoder", "bottleneck"],
+    run="runs/experiment.spelunk",
+)
+```
+
+## Requirements
+
+- Python 3.11+
+- PyTorch for activation capture
+- NumPy for NumPy datasets and local array statistics
+
+Install optional capture dependencies with pip when needed:
+
+```bash
+python -m pip install "spelunk-ml[pytorch,arrays,datasets]"
+```
+
+## Status
+
+Spelunk is a pre-alpha release. It is useful for local activation capture and inspection, but some workflows are intentionally early:
+
+- Capture currently expects a local Python model factory returning a `torch.nn.Module`.
+- Checkpoint file loading is not implemented yet.
+- Diagnostics currently focus on activation health.
+- TUI feature selection is still shortcut-driven rather than fully form-based.
 
 ## Documentation
 
-- `docs/VISION.md`
-- `docs/ARCHITECTURE.md`
-- `docs/DOMAIN_MODEL.md`
-- `docs/PYTHON_API.md`
-- `docs/CAPTURE_ARCHITECTURE.md`
-- `docs/CAPTURE_CONFIG.md`
-- `docs/EXAMPLE_SMOKE.md`
-- `docs/STORAGE_FORMAT.md`
-- `docs/TUI_DESIGN.md`
-- `docs/TUI_COMPONENTS.md`
-- `docs/DESIGN_LANGUAGE.md`
-- `docs/CLI_SPEC.md`
-- `docs/TESTING_STRATEGY.md`
-- `docs/ROADMAP.md`
-- `docs/RELEASE.md`
-- `docs/CLEAN_INSTALL.md`
-- `docs/PYPI_RELEASE.md`
-- `docs/CONTRIBUTING.md`
-- `docs/DECISIONS.md`
+- [Getting Started](docs/GETTING_STARTED.md)
+- [CLI Reference](docs/CLI_REFERENCE.md)
+- [Capture Configs](docs/CAPTURE_CONFIG.md)
+- [Python API](docs/PYTHON_API.md)
+- [Storage Format](docs/STORAGE_FORMAT.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Contributing](docs/CONTRIBUTING.md)
+
+## Development
+
+```bash
+python -m pip install -e ".[dev,arrays,datasets,tui]"
+python -m pytest
+python -m ruff check .
+python -m mypy
+```
