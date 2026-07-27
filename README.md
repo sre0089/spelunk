@@ -6,6 +6,12 @@ The current release target is a local-first pre-alpha for researchers who are co
 
 ## Install
 
+From PyPI:
+
+```bash
+python -m pip install spelunk-ml
+```
+
 From a checkout:
 
 ```bash
@@ -150,7 +156,7 @@ See `docs/PYTHON_API.md`.
 
 - capture requires a local PyTorch model factory
 - model loading does not handle checkpoint files directly yet
-- no packaged PyPI release has been cut yet
+- PyPI distribution name is `spelunk-ml`; the CLI and import name remain `spelunk`
 - diagnostics are intentionally limited to activation health for now
 
 ## Documentation

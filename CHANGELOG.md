@@ -31,4 +31,5 @@ First pre-alpha release candidate.
 - TUI inspect and compare workflows use deterministic shortcut actions instead of full input forms.
 - Checkpoint file loading is not implemented yet.
 - Diagnostics are limited to activation health.
-- No PyPI or Homebrew publish has been performed yet.
+- PyPI distribution name is `spelunk-ml`; the CLI and import name remain `spelunk`.
+- No Homebrew publish has been performed yet.

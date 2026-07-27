@@ -10,14 +10,14 @@ python -m build
 
 Expected artifacts:
 
-- `dist/spelunk-0.1.0a1.tar.gz`
-- `dist/spelunk-0.1.0a1-py3-none-any.whl`
+- `dist/spelunk_ml-0.1.0a1.tar.gz`
+- `dist/spelunk_ml-0.1.0a1-py3-none-any.whl`
 
 Create a clean environment and install the wheel:
 
 ```bash
 python3.11 -m venv /tmp/spelunk-clean-venv-311
-/tmp/spelunk-clean-venv-311/bin/python -m pip install dist/spelunk-0.1.0a1-py3-none-any.whl
+/tmp/spelunk-clean-venv-311/bin/python -m pip install dist/spelunk_ml-0.1.0a1-py3-none-any.whl
 ```
 
 Verify console script:

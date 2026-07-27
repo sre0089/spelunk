@@ -3,7 +3,7 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "spelunk"
+name = "spelunk-ml"
 version = "0.1.0a1"
 description = "Terminal-native IDE for learned representations."
 readme = "README.md"

@@ -10,29 +10,29 @@ python -m build
 
 Expected artifacts:
 
-- `dist/spelunk-0.1.0a1.tar.gz`
-- `dist/spelunk-0.1.0a1-py3-none-any.whl`
+- `dist/spelunk_ml-0.1.0a1.tar.gz`
+- `dist/spelunk_ml-0.1.0a1-py3-none-any.whl`
 
 ## Metadata Check
 
 ```bash
-python -m twine check dist/spelunk-0.1.0a1*
+python -m twine check dist/spelunk_ml-0.1.0a1*
 ```
 
 ## TestPyPI
 
-The `spelunk` name is already owned by another account on TestPyPI. For TestPyPI-only validation, temporarily set `pyproject.toml` project name to `spelunk-sre0089`, rebuild, upload, install, then restore the project name to `spelunk` before real PyPI.
+The `spelunk` name is already owned by another account on TestPyPI. TestPyPI validation used temporary distribution name `spelunk-sre0089`. The real PyPI distribution name is `spelunk-ml`; the CLI and import name remain `spelunk`.
 
 Use TestPyPI before the real upload:
 
 ```bash
-python -m twine upload --repository testpypi dist/spelunk-0.1.0a1*
+python -m twine upload --repository testpypi dist/spelunk_ml-0.1.0a1*
 ```
 
 Verify install:
 
 ```bash
-python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ spelunk==0.1.0a1
+python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ spelunk-ml==0.1.0a1
 spelunk --version
 spelunk doctor
 ```
@@ -48,13 +48,13 @@ python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-ur
 Publish only after TestPyPI verification:
 
 ```bash
-python -m twine upload dist/spelunk-0.1.0a1*
+python -m twine upload dist/spelunk_ml-0.1.0a1*
 ```
 
 Verify install:
 
 ```bash
-python -m pip install spelunk==0.1.0a1
+python -m pip install spelunk-ml==0.1.0a1
 spelunk --version
 spelunk doctor
 ```
