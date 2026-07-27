@@ -49,13 +49,28 @@ Python package: importable
 Verify import:
 
 ```bash
-/tmp/spelunk-clean-venv-311/bin/python -c "from spelunk import Session, __version__; print(__version__, Session.__name__)"
+/tmp/spelunk-clean-venv-311/bin/python -c "import spelunk; print(spelunk.__version__); print(callable(spelunk.capture))"
 ```
 
 Expected:
 
 ```text
-0.1.0a1 Session
+0.1.0a1
+True
 ```
+
+Verify direct-capture help:
+
+```bash
+/tmp/spelunk-clean-venv-311/bin/spelunk capture --help
+```
+
+Expected:
+
+- `Usage: spelunk capture [OPTIONS] [config]`
+- `--run`
+- `--model-path`
+- `--dataset`
+- `--layers`
 
 Note: optional capture workflows require installing the relevant extras, such as `pytorch`, `arrays`, and `datasets`.

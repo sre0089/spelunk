@@ -15,8 +15,13 @@ First pre-alpha release candidate.
 - Activation health diagnostics.
 - Run comparison with metric deltas.
 - Markdown and JSON reports.
-- CLI commands for capture, scan, inspect, report, compare, doctor, and TUI launch.
+- CLI commands for layer discovery, capture, quickstart, init, scan, inspect, report, compare, doctor, and TUI launch.
+- Flag-based capture for first runs without writing config files.
+- Starter config generation with `spelunk init`.
+- One-shot `spelunk quickstart` workflow for capture, scan, and report generation.
+- Python capture helper with `spelunk.capture(...)`.
 - Textual TUI shell with recent runs, overview, layers, diagnostics, inspect, compare, and report generation actions.
+- Native TUI Markdown report preview, JSON summary, compare bars, and capture-planning guidance.
 - Public Python API from `spelunk`.
 - Runnable example smoke workflow.
 
