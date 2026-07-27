@@ -1,6 +1,7 @@
 """Public Python API for Spelunk."""
 
 from spelunk._version import __version__
+from spelunk.api import capture
 from spelunk.config import CaptureConfig, load_capture_config
 from spelunk.domain import (
     Checkpoint,
@@ -56,6 +57,7 @@ __all__ = [
     "StorageError",
     "UnsupportedOperationError",
     "__version__",
+    "capture",
     "load_capture_config",
     "run_capture_config",
 ]

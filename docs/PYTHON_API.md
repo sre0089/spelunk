@@ -10,9 +10,28 @@ scan = session.scan()
 report = session.report(format="markdown")
 ```
 
+Capture directly from a notebook or script:
+
+```python
+import numpy as np
+import torch
+import spelunk
+
+model = torch.nn.Sequential(...)
+samples = np.load("samples.npy")
+
+result = spelunk.capture(
+    model=model,
+    dataset=samples,
+    layers=["encoder", "bottleneck"],
+    run="runs/experiment.spelunk",
+)
+```
+
 ## Stable Entry Points
 
 - `Session`: open, create, scan, compare, report, and inspect local runs
+- `capture`: capture PyTorch activations from an in-memory model and dataset
 - `load_capture_config`: parse JSON or TOML capture configs
 - `run_capture_config`: execute a local capture config
 

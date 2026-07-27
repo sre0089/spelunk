@@ -13,6 +13,7 @@ from spelunk import (
     Session,
     SpelunkError,
     __version__,
+    capture,
     load_capture_config,
     run_capture_config,
 )
@@ -39,7 +40,9 @@ def test_public_api_exports_stable_entrypoints() -> None:
     assert issubclass(SpelunkError, Exception)
     assert callable(load_capture_config)
     assert callable(run_capture_config)
+    assert callable(capture)
     assert "Session" in exported
+    assert "capture" in exported
     assert "run_capture_config" in exported
     assert "NumpyShardActivationStore" not in exported
     assert "SpelunkApp" not in exported
