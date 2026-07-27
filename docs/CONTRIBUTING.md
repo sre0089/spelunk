@@ -2,6 +2,8 @@
 
 Spelunk is planned as a long-term software product, not a notebook or demo.
 
+The public package is distributed as `spelunk-ml`. The installed command and Python import are both `spelunk`.
+
 ## Engineering Rules
 
 - Keep domain and analysis code independent from UI and framework adapters.
@@ -24,4 +26,11 @@ Before a change is complete:
 
 ## Documentation
 
-Record meaningful architecture decisions in `DECISIONS.md`. Record unresolved choices instead of silently choosing arbitrary defaults.
+Keep user-facing docs clear enough for someone who has never seen the repository before:
+
+- update `README.md` when install, quickstart, or major workflows change
+- update `docs/GETTING_STARTED.md` and `docs/CLI_REFERENCE.md` when commands change
+- keep release/audit notes in maintainer docs, not in the first-run path
+- record meaningful architecture decisions in `DECISIONS.md`
+
+Record unresolved choices instead of silently choosing arbitrary defaults.
