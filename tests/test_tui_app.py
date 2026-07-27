@@ -21,9 +21,11 @@ def test_tui_project_picker_renders(tmp_path: Path, monkeypatch: MonkeyPatch) ->
         async with app.run_test() as pilot:
             await pilot.pause()
             assert app.title == "Spelunk"
-            assert "Open a run with `spelunk open RUN`" in str(
+            assert "Start a capture" in str(
                 app.query_one("#primary-copy", Static).render()
             )
+            assert "spelunk quickstart" in str(app.query_one("#primary-copy", Static).render())
+            assert "Capture planning" in str(app.query_one("#details-copy", Static).render())
             assert app.query_one("#project-actions", ListView).index == 0
 
     asyncio.run(scenario())
@@ -84,7 +86,8 @@ def test_tui_project_picker_prunes_stale_recent_runs(
         async with app.run_test() as pilot:
             await pilot.pause()
             content = str(app.query_one("#primary-copy", Static).render())
-            assert "Open a run with `spelunk open RUN`" in content
+            assert "Start a capture" in content
+            assert "spelunk layers" in content
             assert str(stale.resolve()) not in content
 
     asyncio.run(scenario())

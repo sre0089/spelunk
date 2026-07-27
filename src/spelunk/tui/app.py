@@ -339,10 +339,11 @@ def _layer_summary_text(scan: ScanResult) -> str:
 
 def _project_picker_text(state: AppState) -> str:
     if not state.recent_runs:
-        return "Open a run with `spelunk open RUN` to add it to recent runs."
+        return _capture_planning_text()
     lines = ["Recent runs"]
     for path in state.recent_runs:
         lines.append(f"- {_recent_run_label(path)}")
+    lines.extend(["", _capture_planning_text()])
     return "\n".join(lines)
 
 
@@ -419,7 +420,7 @@ def _secondary_content_text(state: AppState) -> str:
 def _details_text(state: AppState) -> str:
     scan = state.scan_result
     if scan is None:
-        return "No run selected."
+        return _project_picker_details_text(state)
     if state.selected_mode == "diagnostics":
         return _diagnostic_evidence_text(scan)
     if state.selected_mode == "layers":
@@ -458,6 +459,36 @@ def _statistics_summary_text(scan: ScanResult) -> str:
                 f"- {summary.layer_id} {statistic.metric}: "
                 f"{statistic.value:.6g}{bar} over {statistic.sample_count} samples"
             )
+    return "\n".join(lines)
+
+
+def _capture_planning_text() -> str:
+    return "\n".join(
+        [
+            "Start a capture",
+            "1. Discover layers:",
+            "   spelunk layers --model-path model_factory.py --factory build_model",
+            "2. Run quickstart:",
+            "   spelunk quickstart --run runs/experiment.spelunk",
+            "     --model-path model_factory.py --dataset samples.npy --layers encoder",
+            "",
+            "Config path:",
+            "   spelunk init --model-path model_factory.py --dataset samples.npy --layers encoder",
+        ]
+    )
+
+
+def _project_picker_details_text(state: AppState) -> str:
+    lines = [
+        "Capture planning",
+        "- Config files are optional for first runs.",
+        "- Use `spelunk layers` before capture to avoid guessing layer names.",
+        "- Use `spelunk quickstart` to capture, scan, and generate reports.",
+    ]
+    if state.recent_runs:
+        lines.append(f"- Recent valid runs: {len(state.recent_runs)}")
+    else:
+        lines.append("- Recent valid runs: 0")
     return "\n".join(lines)
 
 
