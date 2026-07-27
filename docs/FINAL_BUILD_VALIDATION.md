@@ -60,4 +60,16 @@ Installed from PyPI into `/tmp/spelunk-pypi-venv` and verified:
 
 ## Remaining Release Work
 
-Homebrew formula and tap publishing have not been performed.
+## Homebrew Smoke
+
+Published tap: `sre0089/homebrew-spelunk`
+
+Validated locally:
+
+- `brew style /tmp/homebrew-spelunk/Formula/spelunk-ml.rb`
+- `brew audit --new sre0089/spelunk/spelunk-ml`
+- `brew install --build-from-source sre0089/spelunk/spelunk-ml`
+- `/opt/homebrew/Cellar/spelunk-ml/0.1.0a1/bin/spelunk --version`
+- `/opt/homebrew/Cellar/spelunk-ml/0.1.0a1/bin/spelunk doctor`
+
+Local validation could not link `/opt/homebrew/bin/spelunk` because an existing pip-installed `spelunk` command already owned that path. The Homebrew Cellar binary itself was verified.

@@ -12,6 +12,13 @@ From PyPI:
 python -m pip install spelunk-ml
 ```
 
+From Homebrew:
+
+```bash
+brew tap sre0089/spelunk
+brew install spelunk-ml
+```
+
 From a checkout:
 
 ```bash
@@ -156,7 +163,7 @@ See `docs/PYTHON_API.md`.
 
 - capture requires a local PyTorch model factory
 - model loading does not handle checkpoint files directly yet
-- PyPI distribution name is `spelunk-ml`; the CLI and import name remain `spelunk`
+- PyPI/Homebrew distribution name is `spelunk-ml`; the CLI and import name remain `spelunk`
 - diagnostics are intentionally limited to activation health for now
 
 ## Documentation

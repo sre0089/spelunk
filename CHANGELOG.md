@@ -33,4 +33,4 @@ First pre-alpha release candidate.
 - Diagnostics are limited to activation health.
 - PyPI distribution name is `spelunk-ml`; the CLI and import name remain `spelunk`.
 - Published to PyPI as `spelunk-ml`.
-- No Homebrew publish has been performed yet.
+- Published Homebrew tap `sre0089/spelunk` with formula `spelunk-ml`.
