@@ -75,5 +75,8 @@ def remember_recent_run(
     normalized = Path(run).expanduser().resolve()
     existing = [item for item in load_recent_runs(storage_path) if item != normalized]
     updated = (normalized, *existing[: max(limit - 1, 0)])
-    storage_path.parent.mkdir(parents=True, exist_ok=True)
-    storage_path.write_text(json.dumps([str(item) for item in updated], indent=2) + "\n")
+    try:
+        storage_path.parent.mkdir(parents=True, exist_ok=True)
+        storage_path.write_text(json.dumps([str(item) for item in updated], indent=2) + "\n")
+    except OSError:
+        return

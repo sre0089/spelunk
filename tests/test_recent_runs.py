@@ -26,6 +26,18 @@ def test_load_recent_runs_missing_file_returns_empty_tuple(tmp_path: Path) -> No
     assert load_recent_runs(tmp_path / "missing.json") == ()
 
 
+def test_remember_recent_run_ignores_unwritable_storage(tmp_path: Path) -> None:
+    blocked_parent = tmp_path / "not-a-directory"
+    blocked_parent.write_text("")
+
+    remember_recent_run(
+        tmp_path / "run.spelunk",
+        path=blocked_parent / "recent-runs.json",
+    )
+
+    assert blocked_parent.read_text() == ""
+
+
 def test_prune_stale_recent_runs_keeps_only_manifest_backed_runs(tmp_path: Path) -> None:
     storage = tmp_path / "recent-runs.json"
     valid = tmp_path / "valid.spelunk"
