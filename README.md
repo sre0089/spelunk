@@ -138,6 +138,7 @@ Spelunk is a pre-alpha release. It is useful for local activation capture and in
 ## Documentation
 
 - [Documentation Index](docs/README.md)
+- [Install](docs/INSTALL.md)
 - [Getting Started](docs/GETTING_STARTED.md)
 - [CLI Reference](docs/CLI_REFERENCE.md)
 - [Capture Configs](docs/CAPTURE_CONFIG.md)

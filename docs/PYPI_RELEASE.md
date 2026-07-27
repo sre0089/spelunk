@@ -1,6 +1,6 @@
 # PyPI Release Prep
 
-This project was published to PyPI as `spelunk-ml==0.1.0a1`.
+Spelunk was published to PyPI as `spelunk-ml==0.1.0a1`.
 
 ## Build
 

@@ -6,7 +6,13 @@ Spelunk is published through the tap:
 https://github.com/sre0089/homebrew-spelunk
 ```
 
-Install:
+One-line install:
+
+```bash
+brew install sre0089/spelunk/spelunk-ml
+```
+
+Or tap first:
 
 ```bash
 brew tap sre0089/spelunk

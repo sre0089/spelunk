@@ -5,6 +5,7 @@ Start here if you are using Spelunk for the first time.
 ## User Guides
 
 - [Getting Started](GETTING_STARTED.md): install, capture, report, and open the TUI.
+- [Install](INSTALL.md): pip, Homebrew, and source installs.
 - [CLI Reference](CLI_REFERENCE.md): command-by-command usage.
 - [Capture Configs](CAPTURE_CONFIG.md): JSON/TOML config format for reproducible runs.
 - [Python API](PYTHON_API.md): use Spelunk from notebooks and scripts.

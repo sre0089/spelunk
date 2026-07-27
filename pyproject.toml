@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "spelunk-ml"
 version = "0.1.0a1"
-description = "Terminal-native IDE for learned representations."
+description = "Terminal-native inspection tool for PyTorch activations and learned representations."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -18,6 +18,9 @@ keywords = [
   "representations",
   "terminal",
   "tui",
+  "pytorch",
+  "activations",
+  "diagnostics",
 ]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
@@ -39,6 +42,7 @@ dependencies = [
 Homepage = "https://github.com/sre0089/spelunk"
 Repository = "https://github.com/sre0089/spelunk"
 Issues = "https://github.com/sre0089/spelunk/issues"
+Documentation = "https://github.com/sre0089/spelunk/tree/main/docs"
 
 [project.optional-dependencies]
 dev = [
