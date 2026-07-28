@@ -43,6 +43,7 @@ These files are useful for release work and project planning, but most users do 
 - [PyPI Release Prep](PYPI_RELEASE.md)
 - [Clean Install Verification](CLEAN_INSTALL.md)
 - [Public Channel Smoke Test](PUBLIC_CHANNEL_SMOKE.md)
+- [Public Install 0.1.0a2 Gate](PUBLIC_INSTALL_A2_GATE.md)
 - [Final Build Validation](FINAL_BUILD_VALIDATION.md)
 - [Bigger-Model Release Audit](BIGGER_MODEL_RELEASE_AUDIT.md)
 - [TUI Smoke Test](TUI_SMOKE.md)
