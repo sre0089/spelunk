@@ -1,4 +1,5 @@
 import json
+from collections import OrderedDict
 from pathlib import Path
 
 import pytest
@@ -260,6 +261,58 @@ def test_capture_accepts_direct_workflow_flags(tmp_path: Path) -> None:
     assert scan.layers[0].layer_id == "encoder"
 
 
+def test_capture_direct_flags_load_checkpoint_path(tmp_path: Path) -> None:
+    np = pytest.importorskip("numpy")
+    torch = pytest.importorskip("torch")
+    np.save(tmp_path / "samples.npy", np.array([[1.0, 0.0]], dtype=np.float32))
+    model_path = tmp_path / "model_factory.py"
+    model_path.write_text(
+        "\n".join(
+            [
+                "from collections import OrderedDict",
+                "import torch",
+                "",
+                "def build_model():",
+                "    model = torch.nn.Sequential(",
+                "        OrderedDict([('encoder', torch.nn.Linear(2, 1, bias=False))])",
+                "    )",
+                "    torch.nn.init.zeros_(model.encoder.weight)",
+                "    return model",
+                "",
+            ]
+        )
+    )
+    model = torch.nn.Sequential(OrderedDict([("encoder", torch.nn.Linear(2, 1, bias=False))]))
+    with torch.no_grad():
+        model.encoder.weight.copy_(torch.tensor([[5.0, 0.0]]))
+    checkpoint_path = tmp_path / "weights.pt"
+    torch.save({"state_dict": model.state_dict()}, checkpoint_path)
+
+    result = runner.invoke(
+        cli_app.app,
+        [
+            "capture",
+            "--run",
+            str(tmp_path / "run-001.spelunk"),
+            "--model-path",
+            str(model_path),
+            "--checkpoint-path",
+            str(checkpoint_path),
+            "--dataset",
+            str(tmp_path / "samples.npy"),
+            "--layers",
+            "encoder",
+            "--batch-size",
+            "1",
+        ],
+    )
+
+    assert result.exit_code == 0
+    scan = Session.open(tmp_path / "run-001.spelunk").scan()
+    statistic = next(item for item in scan.layers[0].statistics if item.metric == "activation_mean")
+    assert statistic.value == 5.0
+
+
 def test_capture_direct_flags_require_run() -> None:
     result = runner.invoke(cli_app.app, ["capture", "--layers", "encoder"])
 
@@ -316,6 +369,66 @@ def test_quickstart_captures_reports_and_prints_tui_command(
     assert (tmp_path / "run-001.spelunk" / "reports" / "report.md").exists()
     assert (tmp_path / "run-001.spelunk" / "reports" / "report.json").exists()
     assert load_recent_runs() == ((tmp_path / "run-001.spelunk").resolve(),)
+
+
+def test_capture_config_loads_checkpoint_path(tmp_path: Path) -> None:
+    np = pytest.importorskip("numpy")
+    torch = pytest.importorskip("torch")
+    np.save(tmp_path / "samples.npy", np.array([[1.0, 0.0]], dtype=np.float32))
+    (tmp_path / "model_factory.py").write_text(
+        "\n".join(
+            [
+                "from collections import OrderedDict",
+                "import torch",
+                "",
+                "def build_model():",
+                "    model = torch.nn.Sequential(",
+                "        OrderedDict([('encoder', torch.nn.Linear(2, 1, bias=False))])",
+                "    )",
+                "    torch.nn.init.zeros_(model.encoder.weight)",
+                "    return model",
+                "",
+            ]
+        )
+    )
+    model = torch.nn.Sequential(OrderedDict([("encoder", torch.nn.Linear(2, 1, bias=False))]))
+    with torch.no_grad():
+        model.encoder.weight.copy_(torch.tensor([[7.0, 0.0]]))
+    torch.save(model.state_dict(), tmp_path / "weights.pt")
+    config_path = tmp_path / "capture.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "run": "run-001.spelunk",
+                "model": {
+                    "id": "model-001",
+                    "name": "Tiny Torch",
+                    "framework": "pytorch",
+                    "path": "model_factory.py",
+                    "checkpoint_path": "weights.pt",
+                    "factory": "build_model",
+                },
+                "dataset": {
+                    "id": "dataset-001",
+                    "name": "samples",
+                    "kind": "numpy",
+                    "source": "samples.npy",
+                },
+                "capture": {
+                    "layers": ["encoder"],
+                    "checkpoint_id": "ckpt-001",
+                    "checkpoint_label": "trained",
+                },
+            }
+        )
+    )
+
+    result = runner.invoke(cli_app.app, ["capture", str(config_path)])
+
+    assert result.exit_code == 0
+    scan = Session.open(tmp_path / "run-001.spelunk").scan()
+    statistic = next(item for item in scan.layers[0].statistics if item.metric == "activation_mean")
+    assert statistic.value == 7.0
 
 
 def test_init_writes_starter_capture_config(tmp_path: Path) -> None:

@@ -91,6 +91,10 @@ def capture(
         str,
         typer.Option("--factory", help="Model factory callable name."),
     ] = "build_model",
+    checkpoint_path: Annotated[
+        Path | None,
+        typer.Option("--checkpoint-path", help="PyTorch state_dict or checkpoint file to load."),
+    ] = None,
     dataset: Annotated[
         Path | None,
         typer.Option("--dataset", help="Dataset file or image folder."),
@@ -150,6 +154,7 @@ def capture(
                 model_path=model_path,
                 model_module=model_module,
                 factory=factory,
+                checkpoint_path=checkpoint_path,
                 dataset=dataset,
                 layer_selectors=tuple(layer_selectors or ()),
                 dataset_kind=dataset_kind,
@@ -224,6 +229,10 @@ def quickstart(
         str,
         typer.Option("--factory", help="Model factory callable name."),
     ] = "build_model",
+    checkpoint_path: Annotated[
+        Path | None,
+        typer.Option("--checkpoint-path", help="PyTorch state_dict or checkpoint file to load."),
+    ] = None,
     dataset: Annotated[
         Path | None,
         typer.Option("--dataset", help="Dataset file or image folder."),
@@ -284,6 +293,7 @@ def quickstart(
             model_path=model_path,
             model_module=model_module,
             factory=factory,
+            checkpoint_path=checkpoint_path,
             dataset=dataset,
             layer_selectors=tuple(layer_selectors or ()),
             dataset_kind=dataset_kind,
@@ -336,6 +346,10 @@ def init(
         str,
         typer.Option("--factory", help="Model factory callable name."),
     ] = "build_model",
+    checkpoint_path: Annotated[
+        Path | None,
+        typer.Option("--checkpoint-path", help="PyTorch state_dict or checkpoint file to load."),
+    ] = None,
     dataset: Annotated[
         Path | None,
         typer.Option("--dataset", help="Dataset file or image folder."),
@@ -378,6 +392,7 @@ def init(
         model_path=model_path,
         model_module=model_module,
         factory=factory,
+        checkpoint_path=checkpoint_path,
         dataset=dataset,
         layers=tuple(layer_selectors or ("encoder",)),
         dataset_kind=dataset_kind or "numpy",
@@ -486,6 +501,7 @@ def _capture_config_from_flags(
     model_path: Path | None,
     model_module: str | None,
     factory: str,
+    checkpoint_path: Path | None,
     dataset: Path | None,
     layer_selectors: tuple[str, ...],
     dataset_kind: str | None,
@@ -510,6 +526,7 @@ def _capture_config_from_flags(
         model_path=model_path,
         model_module=model_module,
         factory=factory,
+        checkpoint_path=checkpoint_path,
         dataset=dataset,
         layers=layer_selectors,
         storage_backend=storage_backend,
@@ -531,6 +548,7 @@ def _starter_config_payload(
     model_path: Path | None,
     model_module: str | None,
     factory: str,
+    checkpoint_path: Path | None,
     dataset: Path | None,
     layers: tuple[str, ...],
     dataset_kind: str,
@@ -548,6 +566,8 @@ def _starter_config_payload(
         model["module"] = model_module
     else:
         model["path"] = str(model_path or Path("model_factory.py"))
+    if checkpoint_path is not None:
+        model["checkpoint_path"] = str(checkpoint_path)
     capture: dict[str, object] = {
         "layers": list(layers),
         "checkpoint_id": "ckpt-001",

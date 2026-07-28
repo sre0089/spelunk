@@ -23,6 +23,7 @@ class ModelConfig:
     factory: str
     module: str | None = None
     path: Path | None = None
+    checkpoint_path: Path | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,21 +84,30 @@ def _read_config(path: Path) -> Mapping[str, Any]:
 def _model_config(data: Mapping[str, Any], base: Path) -> ModelConfig:
     module = data.get("module")
     model_path = data.get("path")
+    checkpoint_path = data.get("checkpoint_path")
     if module is None and model_path is None:
         raise ManifestError("Capture config model requires either 'module' or 'path'")
     if module is not None and not isinstance(module, str):
         raise ManifestError("Expected 'model.module' to be a string")
     if model_path is not None and not isinstance(model_path, str):
         raise ManifestError("Expected 'model.path' to be a string")
+    if checkpoint_path is not None and not isinstance(checkpoint_path, str):
+        raise ManifestError("Expected 'model.checkpoint_path' to be a string")
     resolved_path = _resolve_path(model_path, base) if model_path is not None else None
+    resolved_checkpoint_path = (
+        _resolve_path(checkpoint_path, base) if checkpoint_path is not None else None
+    )
     if resolved_path is not None and not resolved_path.exists():
         raise ManifestError(f"Model factory file does not exist: {resolved_path}")
+    if resolved_checkpoint_path is not None and not resolved_checkpoint_path.exists():
+        raise ManifestError(f"Model checkpoint file does not exist: {resolved_checkpoint_path}")
     return ModelConfig(
         id=ModelId(_required_str(data, "id")),
         name=_required_str(data, "name"),
         framework=_required_str(data, "framework"),
         module=module,
         path=resolved_path,
+        checkpoint_path=resolved_checkpoint_path,
         factory=_required_str(data, "factory"),
     )
 

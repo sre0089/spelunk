@@ -37,6 +37,8 @@ spelunk quickstart \
   --layers encoder
 ```
 
+To load trained weights before capture, add `--checkpoint-path weights.pt`.
+
 Open the TUI:
 
 ```bash
@@ -56,7 +58,7 @@ q   quit
 ## What You Can Do
 
 - Discover valid PyTorch layer selectors before capture.
-- Capture activations from CLI flags, JSON/TOML configs, or Python.
+- Capture activations from CLI flags, JSON/TOML configs, or Python, including saved PyTorch checkpoints.
 - Store activations as NumPy shards or Zarr.
 - Scan runs for layer statistics and activation health diagnostics.
 - Inspect feature statistics and top examples.
@@ -72,6 +74,7 @@ Capture directly from flags:
 spelunk capture \
   --run runs/experiment.spelunk \
   --model-path model_factory.py \
+  --checkpoint-path weights.pt \
   --dataset samples.npy \
   --layers encoder \
   --layers bottleneck

@@ -67,6 +67,8 @@ spelunk quickstart \
   --layers encoder
 ```
 
+If your factory creates the architecture but weights live in a checkpoint file, add `--checkpoint-path weights.pt`.
+
 This captures activations, scans the run, generates Markdown and JSON reports, and prints the TUI command.
 
 ## 5. Open The TUI

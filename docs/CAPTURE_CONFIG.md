@@ -20,6 +20,7 @@ spelunk layers --model-path model_factory.py --factory build_model
 spelunk quickstart \
   --run runs/experiment.spelunk \
   --model-path model_factory.py \
+  --checkpoint-path weights.pt \
   --factory build_model \
   --dataset samples.npy \
   --layers encoder
@@ -43,6 +44,7 @@ Model fields:
 - `factory`: callable name returning a `torch.nn.Module`
 - `path`: Python file containing the factory
 - `module`: importable Python module containing the factory
+- `checkpoint_path`: optional PyTorch `state_dict` or checkpoint file to load
 
 Use either `model.path` or `model.module`.
 
@@ -64,6 +66,7 @@ Capture fields:
 ## Model Factory Contract
 
 The factory must be callable with no arguments and return a `torch.nn.Module`.
+When `model.checkpoint_path` is set, Spelunk builds the model first and then calls `load_state_dict`. Plain state dict files, `{"state_dict": ...}`, and `{"model_state_dict": ...}` checkpoints are supported.
 
 ```python
 import torch

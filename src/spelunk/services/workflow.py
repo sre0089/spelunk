@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, cast
 
 from spelunk.capture import DatasetKind
 from spelunk.config import CaptureConfig, CaptureSettings, DatasetConfig, ModelConfig
 from spelunk.domain import CheckpointId, DatasetId, LayerId, ModelId
-from spelunk.errors import SpelunkError
+from spelunk.errors import SpelunkError, UnsupportedOperationError
 from spelunk.storage import StorageBackend
 
 
@@ -28,8 +29,35 @@ def load_model_factory(*, module: str | None, path: Path | None, factory: str) -
     return loaded
 
 
-def load_model(*, module: str | None, path: Path | None, factory: str) -> Any:
-    return load_model_factory(module=module, path=path, factory=factory)()
+def load_model(
+    *,
+    module: str | None,
+    path: Path | None,
+    factory: str,
+    checkpoint_path: Path | None = None,
+) -> Any:
+    model = load_model_factory(module=module, path=path, factory=factory)()
+    if checkpoint_path is not None:
+        apply_model_checkpoint(model, checkpoint_path)
+    return model
+
+
+def apply_model_checkpoint(model: Any, checkpoint_path: Path) -> None:
+    """Load a PyTorch state dict into a factory-created model."""
+    if not checkpoint_path.exists():
+        raise SpelunkError(f"Model checkpoint file does not exist: {checkpoint_path}")
+    try:
+        checkpoint = _torch().load(checkpoint_path, map_location="cpu")
+    except (OSError, RuntimeError, TypeError, ValueError) as error:
+        raise SpelunkError(f"Could not load model checkpoint: {checkpoint_path}") from error
+    state_dict = _checkpoint_state_dict(checkpoint)
+    load_state_dict = getattr(model, "load_state_dict", None)
+    if not callable(load_state_dict):
+        raise SpelunkError("Model checkpoint loading requires a PyTorch module.")
+    try:
+        load_state_dict(state_dict)
+    except (RuntimeError, TypeError, ValueError) as error:
+        raise SpelunkError(f"Could not apply model checkpoint: {checkpoint_path}") from error
 
 
 def build_capture_config(
@@ -38,6 +66,7 @@ def build_capture_config(
     model_path: Path | None,
     model_module: str | None,
     factory: str,
+    checkpoint_path: Path | None,
     dataset: Path,
     layers: tuple[str, ...],
     storage_backend: str,
@@ -63,6 +92,7 @@ def build_capture_config(
             framework="pytorch",
             path=model_path,
             module=model_module,
+            checkpoint_path=checkpoint_path,
             factory=factory,
         ),
         dataset=DatasetConfig(
@@ -106,6 +136,28 @@ def _load_module_from_path(path: Path) -> Any:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _checkpoint_state_dict(checkpoint: Any) -> Mapping[str, Any]:
+    if not isinstance(checkpoint, Mapping):
+        raise SpelunkError("Checkpoint must be a PyTorch state_dict or contain 'state_dict'.")
+    state_dict = checkpoint.get("state_dict")
+    if isinstance(state_dict, Mapping):
+        return state_dict
+    model_state_dict = checkpoint.get("model_state_dict")
+    if isinstance(model_state_dict, Mapping):
+        return model_state_dict
+    return checkpoint
+
+
+def _torch() -> Any:
+    try:
+        import torch
+    except ImportError as error:
+        raise UnsupportedOperationError(
+            "PyTorch checkpoint loading requires the 'pytorch' extra."
+        ) from error
+    return torch
 
 
 def _dataset_kind(value: str) -> DatasetKind:

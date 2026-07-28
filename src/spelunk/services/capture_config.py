@@ -13,7 +13,7 @@ from spelunk.domain import Checkpoint, DatasetRef
 from spelunk.errors import SpelunkError, UnsupportedOperationError
 from spelunk.services.results import CaptureResult
 from spelunk.services.session import Session
-from spelunk.services.workflow import load_model_factory
+from spelunk.services.workflow import load_model
 
 
 def run_capture_config(path: str | Path) -> CaptureResult:
@@ -95,12 +95,12 @@ def _ensure_new_run(config: CaptureConfig) -> None:
 
 
 def _load_model(config: CaptureConfig) -> Any:
-    factory = load_model_factory(
+    model = load_model(
         module=config.model.module,
         path=config.model.path,
         factory=config.model.factory,
+        checkpoint_path=config.model.checkpoint_path,
     )
-    model = factory()
     return model
 
 

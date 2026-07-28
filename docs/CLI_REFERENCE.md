@@ -30,6 +30,7 @@ Capture directly from flags:
 spelunk capture \
   --run runs/experiment.spelunk \
   --model-path model_factory.py \
+  --checkpoint-path weights.pt \
   --dataset samples.npy \
   --layers encoder
 ```
@@ -45,6 +46,7 @@ Useful options:
 - `--model-path`: Python file containing the factory
 - `--model-module`: importable module containing the factory
 - `--factory`: factory callable name, default `build_model`
+- `--checkpoint-path`: optional PyTorch `state_dict` or checkpoint file to load before capture
 - `--dataset`: dataset file or image folder
 - `--dataset-kind`: `numpy`, `csv`, `jsonl`, or `image-folder`
 - `--layers`: repeatable layer selector
@@ -58,6 +60,7 @@ Useful options:
 spelunk quickstart \
   --run runs/experiment.spelunk \
   --model-path model_factory.py \
+  --checkpoint-path weights.pt \
   --dataset samples.npy \
   --layers encoder
 ```
