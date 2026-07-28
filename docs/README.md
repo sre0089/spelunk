@@ -11,6 +11,7 @@ Start here if you are using Spelunk for the first time.
 - [Python API](PYTHON_API.md): use Spelunk from notebooks and scripts.
 - [Storage Format](STORAGE_FORMAT.md): what a `.spelunk` run contains.
 - [Homebrew Release](HOMEBREW_RELEASE.md): Homebrew install and validation notes.
+- [GitHub Release Notes](GITHUB_RELEASE.md): release notes for the current alpha.
 
 ## Examples
 
