@@ -28,6 +28,8 @@ spelunk doctor
 
 The formula installs the PyPI distribution `spelunk-ml`. The command and Python import name remain `spelunk`.
 
+For the `0.1.0a2` formula refresh, see [Homebrew 0.1.0a2 Refresh Prep](HOMEBREW_A2_REFRESH.md).
+
 ## Validation Notes
 
 The formula was validated locally with:
