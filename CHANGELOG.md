@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.0a2
+
+TUI polish and release hardening patch alpha.
+
+### Added
+
+- Native TUI prompts for feature inspection and recent-run comparison.
+- PyTorch checkpoint loading through `--checkpoint-path` and `model.checkpoint_path`.
+- Feature-level activation health diagnostics for dead features.
+- Diagnostics documentation for activation health evidence and severity.
+- Public-channel smoke documentation and TUI release QA notes.
+
+### Changed
+
+- Inspect and compare shortcuts now open explicit selection flows before running.
+- README status and docs now reflect checkpoint support and richer diagnostics.
+
 ## 0.1.0a1
 
 First published pre-alpha release.

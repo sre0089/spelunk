@@ -1,19 +1,19 @@
 # Final Build Validation
 
-Validated for `0.1.0a1`.
+Validated for `0.1.0a2`.
 
 ## Checks
 
-- `python -m pytest`: 97 passed
+- `python -m pytest`: 100 passed
 - `python -m ruff check .`: passed
 - `python -m mypy`: passed
 - `python -m build`: built wheel and sdist
-- `python -m twine check dist/spelunk_ml-0.1.0a1*`: passed
+- `python -m twine check dist/spelunk_ml-0.1.0a2*`: passed
 
 ## Artifacts
 
-- `dist/spelunk_ml-0.1.0a1.tar.gz`
-- `dist/spelunk_ml-0.1.0a1-py3-none-any.whl`
+- `dist/spelunk_ml-0.1.0a2.tar.gz`
+- `dist/spelunk_ml-0.1.0a2-py3-none-any.whl`
 
 ## Wheel Contents
 

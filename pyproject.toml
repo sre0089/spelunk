@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "spelunk-ml"
-version = "0.1.0a1"
+version = "0.1.0a2"
 description = "Terminal-native inspection tool for PyTorch activations and learned representations."
 readme = "README.md"
 requires-python = ">=3.11"

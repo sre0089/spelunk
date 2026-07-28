@@ -20,7 +20,7 @@ from spelunk import (
 
 
 def test_package_imports() -> None:
-    assert __version__ == "0.1.0a1"
+    assert __version__ == "0.1.0a2"
 
 
 def test_public_api_exports_stable_entrypoints() -> None:
