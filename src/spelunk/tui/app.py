@@ -13,7 +13,12 @@ from spelunk.config import is_valid_run_path, prune_stale_recent_runs, remember_
 from spelunk.errors import SpelunkError
 from spelunk.services import Session
 from spelunk.services.results import ScanResult
-from spelunk.tui.screens import CommandPaletteScreen, ShortcutOverlayScreen
+from spelunk.tui.screens import (
+    CommandPaletteScreen,
+    CompareRunScreen,
+    InspectFeatureScreen,
+    ShortcutOverlayScreen,
+)
 from spelunk.tui.state import AppState
 from spelunk.tui.widgets import Breadcrumbs, MarkdownViewer, StatusBar
 
@@ -169,12 +174,31 @@ class SpelunkApp(App[None]):
             self.app_state.selected_mode = "inspect"
             self._refresh_loaded_run_view()
             return
-        layer_id = self.app_state.selected_layer_id or self.app_state.scan_result.layers[0].layer_id
-        feature_id = self.app_state.selected_feature_id or "0"
+        self.push_screen(
+            InspectFeatureScreen(
+                tuple(str(summary.layer_id) for summary in self.app_state.scan_result.layers),
+                selected_layer_id=(
+                    str(self.app_state.selected_layer_id)
+                    if self.app_state.selected_layer_id is not None
+                    else None
+                ),
+                selected_feature_id=(
+                    str(self.app_state.selected_feature_id)
+                    if self.app_state.selected_feature_id is not None
+                    else None
+                ),
+            ),
+            callback=self._handle_inspect_feature_request,
+        )
+
+    def _handle_inspect_feature_request(self, request: tuple[str, str] | None) -> None:
+        if request is None or self.session is None or self.app_state.scan_result is None:
+            return
+        layer_id, feature_id = request
         try:
             result = self.session.inspect_feature(
-                layer_id=str(layer_id),
-                feature_id=str(feature_id),
+                layer_id=layer_id,
+                feature_id=feature_id,
             )
         except SpelunkError as error:
             self.app_state.report_message = f"Feature inspection failed: {error}"
@@ -194,11 +218,19 @@ class SpelunkApp(App[None]):
     def action_compare_recent_run(self) -> None:
         if self.session is None or self.app_state.scan_result is None:
             return
-        target_path = _comparison_target(self.session.root, self.app_state.recent_runs)
-        if target_path is None:
+        target_paths = _comparison_targets(self.session.root, self.app_state.recent_runs)
+        if not target_paths:
             self.app_state.report_message = "No other recent run is available to compare."
             self.app_state.selected_mode = "compare"
             self._refresh_loaded_run_view()
+            return
+        self.push_screen(
+            CompareRunScreen(target_paths),
+            callback=self._handle_compare_run_request,
+        )
+
+    def _handle_compare_run_request(self, target_path: Path | None) -> None:
+        if target_path is None or self.session is None or self.app_state.scan_result is None:
             return
         try:
             target = Session.open(target_path)
@@ -569,13 +601,14 @@ def _feature_examples_text(state: AppState) -> str:
     return "\n".join(lines)
 
 
-def _comparison_target(current_root: Path, recent_runs: tuple[Path, ...]) -> Path | None:
+def _comparison_targets(current_root: Path, recent_runs: tuple[Path, ...]) -> tuple[Path, ...]:
     current = current_root.expanduser().resolve()
+    targets = []
     for path in recent_runs:
         candidate = path.expanduser().resolve()
         if candidate != current and is_valid_run_path(candidate):
-            return candidate
-    return None
+            targets.append(candidate)
+    return tuple(targets)
 
 
 def _report_details_text(state: AppState) -> str:

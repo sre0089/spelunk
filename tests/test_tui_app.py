@@ -209,6 +209,12 @@ def test_tui_inspect_feature_action_renders_stats(
         async with app.run_test() as pilot:
             await pilot.press("i")
             await pilot.pause()
+            modal_text = "\n".join(str(widget.render()) for widget in app.screen.query(Static))
+            assert "Inspect Feature" in modal_text
+            assert "Choose a layer" in modal_text
+
+            await pilot.press("enter")
+            await pilot.pause()
             title = str(app.query_one("#primary-title", Static).render())
             content = str(app.query_one("#primary-copy", Static).render())
             details = str(app.query_one("#details-copy", Static).render())
@@ -237,6 +243,13 @@ def test_tui_compare_action_uses_other_recent_run(
         app = SpelunkApp(run_path=left)
         async with app.run_test() as pilot:
             await pilot.press("c")
+            await pilot.pause()
+            modal_text = "\n".join(str(widget.render()) for widget in app.screen.query(Static))
+            labels = [str(widget.render()) for widget in app.screen.query(Label)]
+            assert "Compare Run" in modal_text
+            assert any("run-001.spelunk" in label for label in labels)
+
+            await pilot.press("enter")
             await pilot.pause()
             title = str(app.query_one("#primary-title", Static).render())
             content = str(app.query_one("#primary-copy", Static).render())
@@ -287,10 +300,20 @@ def test_tui_release_smoke_flow(
         async with app.run_test() as pilot:
             await pilot.press("i")
             await pilot.pause()
+            assert "Inspect Feature" in "\n".join(
+                str(widget.render()) for widget in app.screen.query(Static)
+            )
+            await pilot.press("enter")
+            await pilot.pause()
             assert "Inspect Feature" == str(app.query_one("#primary-title", Static).render())
             assert "Top examples" in str(app.query_one("#details-copy", Static).render())
 
             await pilot.press("c")
+            await pilot.pause()
+            assert "Compare Run" in "\n".join(
+                str(widget.render()) for widget in app.screen.query(Static)
+            )
+            await pilot.press("enter")
             await pilot.pause()
             assert "Compare Runs" == str(app.query_one("#primary-title", Static).render())
             assert "Strongest delta:" in str(app.query_one("#primary-copy", Static).render())
