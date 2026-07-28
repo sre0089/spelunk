@@ -1,5 +1,45 @@
 # GitHub Release Notes
 
+## v0.1.0a2
+
+Spelunk `0.1.0a2` is a polish and hardening alpha focused on making the TUI and capture workflow feel less like a prototype.
+
+## Install
+
+```bash
+python -m pip install spelunk-ml==0.1.0a2
+```
+
+Or with Homebrew after the tap formula refresh:
+
+```bash
+brew install sre0089/spelunk/spelunk-ml
+```
+
+The package name is `spelunk-ml`. The command and Python import are both `spelunk`.
+
+## Highlights
+
+- TUI inspect and compare shortcuts now open native selection prompts.
+- Capture supports PyTorch checkpoint loading through `--checkpoint-path`.
+- Capture configs support `model.checkpoint_path`.
+- Activation health diagnostics now report feature-level dead activations.
+- Diagnostics docs explain evidence fields and severity levels.
+- Public-channel, TUI, and build-validation docs were refreshed for release hardening.
+
+## Validation
+
+- `python -m pytest`: 100 passed
+- `python -m ruff check .`: passed
+- `python -m mypy`: passed
+- `python -m build`: built wheel and sdist
+- `python -m twine check dist/spelunk_ml-0.1.0a2*`: passed
+
+## Notes
+
+- PyPI upload requires maintainer credentials and should use the already-built `dist/spelunk_ml-0.1.0a2*` artifacts.
+- Homebrew formula refresh should happen after PyPI exposes the exact source URL for `spelunk_ml-0.1.0a2.tar.gz`.
+
 ## v0.1.0a1
 
 Spelunk is now available as a pre-alpha release for local PyTorch activation capture and representation inspection.

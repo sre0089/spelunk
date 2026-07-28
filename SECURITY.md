@@ -22,4 +22,4 @@ Include:
 
 ## Supported Versions
 
-The current pre-alpha line is `0.1.0a1`. Security fixes will be released as new alpha versions while the API is still stabilizing.
+The current pre-alpha line is `0.1.0a2`. Security fixes will be released as new alpha versions while the API is still stabilizing.
