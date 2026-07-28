@@ -45,6 +45,7 @@ These files are useful for release work and project planning, but most users do 
 - [Final Build Validation](FINAL_BUILD_VALIDATION.md)
 - [Bigger-Model Release Audit](BIGGER_MODEL_RELEASE_AUDIT.md)
 - [TUI Smoke Test](TUI_SMOKE.md)
+- [TUI Release QA](TUI_RELEASE_QA.md)
 - [Testing Strategy](TESTING_STRATEGY.md)
 - [Roadmap](ROADMAP.md)
 - [Milestones](MILESTONES.md)
