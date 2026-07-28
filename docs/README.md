@@ -8,6 +8,7 @@ Start here if you are using Spelunk for the first time.
 - [Install](INSTALL.md): pip, Homebrew, and source installs.
 - [CLI Reference](CLI_REFERENCE.md): command-by-command usage.
 - [Capture Configs](CAPTURE_CONFIG.md): JSON/TOML config format for reproducible runs.
+- [Diagnostics](DIAGNOSTICS.md): activation health warnings and metrics.
 - [Python API](PYTHON_API.md): use Spelunk from notebooks and scripts.
 - [Storage Format](STORAGE_FORMAT.md): what a `.spelunk` run contains.
 - [Homebrew Release](HOMEBREW_RELEASE.md): Homebrew install and validation notes.

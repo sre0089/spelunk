@@ -33,6 +33,7 @@ def test_activation_health_reports_normal_layer() -> None:
     assert "looks normal" in results[0].conclusion
     assert {stat.metric for stat in results[0].statistics} == {
         "zero_fraction",
+        "dead_feature_fraction",
         "saturation_fraction",
         "outlier_fraction",
         "maximum_abs",
@@ -73,3 +74,30 @@ def test_activation_health_detects_sparsity_saturation_and_outliers() -> None:
     assert "saturated" in results["saturated"].conclusion
     assert results["outlier"].severity == "warning"
     assert "outliers" in results["outlier"].conclusion
+
+
+def test_activation_health_detects_dead_features_without_inactive_layer() -> None:
+    store = InMemoryActivationSink()
+    store.write_batch(
+        _batch(
+            "encoder",
+            [
+                [0.0, 1.0, 3.0, 5.0],
+                [0.0, 2.0, 3.0, 6.0],
+                [0.0, 3.0, 3.0, 7.0],
+            ],
+        )
+    )
+    diagnostic = ActivationHealthDiagnostic(
+        dead_feature_warning_fraction=0.25,
+        dead_feature_critical_fraction=0.75,
+    )
+
+    result = diagnostic.run(DiagnosticContext(store=store))[0]
+
+    assert result.severity == "warning"
+    assert "dead_features" in result.conclusion
+    evidence = {item.label: item.value for item in result.evidence}
+    assert evidence["feature_count"] == "4"
+    assert evidence["dead_feature_count"] == "2"
+    assert evidence["dead_feature_fraction"] == "0.500000"

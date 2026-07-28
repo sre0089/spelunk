@@ -29,6 +29,11 @@ class _Accumulator:
     maximum_abs: float = 0.0
     total: float = 0.0
     total_squares: float = 0.0
+    feature_sample_count: int = 0
+    feature_count: int = 0
+    feature_zero_counts: Any = None
+    feature_totals: Any = None
+    feature_total_squares: Any = None
 
     def update(self, array: Any, *, zero_epsilon: float, saturation_abs: float) -> None:
         np = _numpy()
@@ -43,10 +48,28 @@ class _Accumulator:
         self.maximum_abs = max(self.maximum_abs, float(absolute.max()))
         self.total += float(values.sum())
         self.total_squares += float((values * values).sum())
+        feature_values = (
+            values.reshape(values.shape[0], -1)
+            if values.ndim > 1
+            else values.reshape(-1, 1)
+        )
+        self._update_features(feature_values, zero_epsilon=zero_epsilon)
 
-    def finalize(self, *, outlier_z: float) -> None:
-        # Outlier detection is a second pass in the diagnostic class.
-        _ = outlier_z
+    def _update_features(self, values: Any, *, zero_epsilon: float) -> None:
+        np = _numpy()
+        feature_count = int(values.shape[1])
+        if self.feature_zero_counts is None:
+            self.feature_count = feature_count
+            self.feature_zero_counts = np.zeros(feature_count, dtype=int)
+            self.feature_totals = np.zeros(feature_count, dtype=float)
+            self.feature_total_squares = np.zeros(feature_count, dtype=float)
+        if feature_count != self.feature_count:
+            return
+        self.feature_sample_count += int(values.shape[0])
+        absolute = np.abs(values)
+        self.feature_zero_counts += (absolute <= zero_epsilon).sum(axis=0)
+        self.feature_totals += values.sum(axis=0)
+        self.feature_total_squares += (values * values).sum(axis=0)
 
     @property
     def mean(self) -> float:
@@ -71,6 +94,25 @@ class _Accumulator:
     def outlier_fraction(self) -> float:
         return float(self.outlier_count / self.element_count) if self.element_count else 0.0
 
+    def dead_feature_count(self, *, inactive_fraction: float, zero_epsilon: float) -> int:
+        np = _numpy()
+        if self.feature_sample_count < 2 or self.feature_zero_counts is None:
+            return 0
+        zero_fractions = self.feature_zero_counts / self.feature_sample_count
+        means = self.feature_totals / self.feature_sample_count
+        variances = (self.feature_total_squares / self.feature_sample_count) - (means * means)
+        stds = np.sqrt(np.maximum(variances, 0.0))
+        dead_features = (zero_fractions >= inactive_fraction) | (stds <= zero_epsilon)
+        return int(dead_features.sum())
+
+    def dead_feature_fraction(self, *, inactive_fraction: float, zero_epsilon: float) -> float:
+        if self.feature_count == 0:
+            return 0.0
+        return self.dead_feature_count(
+            inactive_fraction=inactive_fraction,
+            zero_epsilon=zero_epsilon,
+        ) / self.feature_count
+
 
 class ActivationHealthDiagnostic:
     id = "activation-health"
@@ -86,6 +128,8 @@ class ActivationHealthDiagnostic:
         saturation_fraction: float = 0.05,
         outlier_z: float = 6.0,
         outlier_fraction: float = 0.01,
+        dead_feature_warning_fraction: float = 0.10,
+        dead_feature_critical_fraction: float = 0.50,
     ) -> None:
         self.zero_epsilon = zero_epsilon
         self.inactive_fraction = inactive_fraction
@@ -94,6 +138,8 @@ class ActivationHealthDiagnostic:
         self.saturation_fraction = saturation_fraction
         self.outlier_z = outlier_z
         self.outlier_fraction = outlier_fraction
+        self.dead_feature_warning_fraction = dead_feature_warning_fraction
+        self.dead_feature_critical_fraction = dead_feature_critical_fraction
 
     def run(self, context: DiagnosticContext) -> tuple[DiagnosticResult, ...]:
         accumulators: dict[LayerId, _Accumulator] = defaultdict(_Accumulator)
@@ -131,7 +177,15 @@ class ActivationHealthDiagnostic:
         severity: Severity = "info"
         if flags:
             severity = "warning"
-        if "inactive" in flags or "saturated" in flags:
+        if (
+            "inactive" in flags
+            or "saturated" in flags
+            or accumulator.dead_feature_fraction(
+                inactive_fraction=self.inactive_fraction,
+                zero_epsilon=self.zero_epsilon,
+            )
+            >= self.dead_feature_critical_fraction
+        ):
             severity = "critical"
 
         conclusion = (
@@ -141,10 +195,18 @@ class ActivationHealthDiagnostic:
         )
         explanation = (
             "Spelunk checked inactivity, sparsity, saturation, and large outliers over stored "
-            "activation batches."
+            "activation batches, including feature-level dead activations."
         )
         provenance = Provenance(source=self.id)
         statistics = self._statistics(layer_id, accumulator, provenance)
+        dead_feature_count = accumulator.dead_feature_count(
+            inactive_fraction=self.inactive_fraction,
+            zero_epsilon=self.zero_epsilon,
+        )
+        dead_feature_fraction = accumulator.dead_feature_fraction(
+            inactive_fraction=self.inactive_fraction,
+            zero_epsilon=self.zero_epsilon,
+        )
         return DiagnosticResult(
             id=DiagnosticId(f"{self.id}:{layer_id}"),
             name=self.name,
@@ -155,6 +217,9 @@ class ActivationHealthDiagnostic:
             explanation=explanation,
             evidence=(
                 EvidenceItem(label="zero_fraction", value=f"{accumulator.zero_fraction:.6f}"),
+                EvidenceItem(label="feature_count", value=str(accumulator.feature_count)),
+                EvidenceItem(label="dead_feature_count", value=str(dead_feature_count)),
+                EvidenceItem(label="dead_feature_fraction", value=f"{dead_feature_fraction:.6f}"),
                 EvidenceItem(
                     label="saturation_fraction",
                     value=f"{accumulator.saturation_fraction:.6f}",
@@ -168,8 +233,14 @@ class ActivationHealthDiagnostic:
 
     def _flags(self, accumulator: _Accumulator) -> tuple[str, ...]:
         flags: list[str] = []
+        dead_feature_fraction = accumulator.dead_feature_fraction(
+            inactive_fraction=self.inactive_fraction,
+            zero_epsilon=self.zero_epsilon,
+        )
         if accumulator.zero_fraction >= self.inactive_fraction:
             flags.append("inactive")
+        elif dead_feature_fraction >= self.dead_feature_warning_fraction:
+            flags.append("dead_features")
         elif accumulator.zero_fraction >= self.sparsity_warning_fraction:
             flags.append("sparse")
         if accumulator.saturation_fraction >= self.saturation_fraction:
@@ -190,6 +261,17 @@ class ActivationHealthDiagnostic:
                 subject_type="layer",
                 metric="zero_fraction",
                 value=accumulator.zero_fraction,
+                sample_count=accumulator.sample_count,
+                provenance=provenance,
+            ),
+            Statistic(
+                subject_id=layer_id,
+                subject_type="layer",
+                metric="dead_feature_fraction",
+                value=accumulator.dead_feature_fraction(
+                    inactive_fraction=self.inactive_fraction,
+                    zero_epsilon=self.zero_epsilon,
+                ),
                 sample_count=accumulator.sample_count,
                 provenance=provenance,
             ),

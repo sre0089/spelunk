@@ -134,9 +134,9 @@ python -m pip install "spelunk-ml[pytorch,arrays,datasets]"
 Spelunk is a pre-alpha release. It is useful for local activation capture and inspection, but some workflows are intentionally early:
 
 - Capture currently expects a local Python model factory returning a `torch.nn.Module`.
-- Checkpoint file loading is not implemented yet.
-- Diagnostics currently focus on activation health.
-- TUI feature selection is still shortcut-driven rather than fully form-based.
+- Checkpoint file loading supports PyTorch state dicts and common checkpoint wrappers.
+- Diagnostics focus on activation health, including sparsity, dead features, saturation, and outliers.
+- TUI inspect and compare shortcuts open native prompts for choosing features and comparison runs.
 
 ## Documentation
 
@@ -145,6 +145,7 @@ Spelunk is a pre-alpha release. It is useful for local activation capture and in
 - [Getting Started](docs/GETTING_STARTED.md)
 - [CLI Reference](docs/CLI_REFERENCE.md)
 - [Capture Configs](docs/CAPTURE_CONFIG.md)
+- [Diagnostics](docs/DIAGNOSTICS.md)
 - [Python API](docs/PYTHON_API.md)
 - [Storage Format](docs/STORAGE_FORMAT.md)
 - [Architecture](docs/ARCHITECTURE.md)
