@@ -20,7 +20,7 @@ jobs:
           cache: pip
 
       - name: Install package
-        run: python -m pip install -e ".[dev,arrays,datasets,tui]"
+        run: python -m pip install -e ".[dev,pytorch,arrays,datasets,tui]"
 
       - name: Run privacy scan
         run: scripts/privacy_scan.sh
