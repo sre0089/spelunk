@@ -1,60 +1,23 @@
-# Spelunk Documentation
+# Spelunk Docs
 
-Start here if you are using Spelunk for the first time.
+Start with the README if you are new to the project. These docs are the public reference for installing Spelunk, capturing activations, reading diagnostics, and contributing.
 
-## User Guides
+## Use Spelunk
 
-- [Getting Started](GETTING_STARTED.md): install, capture, report, and open the TUI.
+- [Getting Started](GETTING_STARTED.md): a short path from install to your first `.spelunk` run.
 - [Install](INSTALL.md): pip, Homebrew, and source installs.
-- [CLI Reference](CLI_REFERENCE.md): command-by-command usage.
-- [Capture Configs](CAPTURE_CONFIG.md): JSON/TOML config format for reproducible runs.
-- [Diagnostics](DIAGNOSTICS.md): activation health warnings and metrics.
-- [Python API](PYTHON_API.md): use Spelunk from notebooks and scripts.
-- [Storage Format](STORAGE_FORMAT.md): what a `.spelunk` run contains.
-- [Homebrew Release](HOMEBREW_RELEASE.md): Homebrew install and validation notes.
-- [Homebrew 0.1.0a2 Refresh Prep](HOMEBREW_A2_REFRESH.md): formula update notes for the next alpha.
-- [GitHub Release Notes](GITHUB_RELEASE.md): release notes for the current alpha.
+- [CLI Reference](CLI_REFERENCE.md): the main `spelunk` commands.
+- [Capture Configs](CAPTURE_CONFIG.md): JSON/TOML config files for repeatable captures.
+- [Diagnostics](DIAGNOSTICS.md): what the activation health checks mean.
+- [Python API](PYTHON_API.md): using Spelunk from scripts or notebooks.
+- [Storage Format](STORAGE_FORMAT.md): what is inside a local `.spelunk` run.
 
 ## Examples
 
-- [Example Smoke Workflow](EXAMPLE_SMOKE.md): runnable local workflow using `examples/`.
-- [`examples/README.md`](../examples/README.md): quick map of bundled example files.
-- [`examples/model_factory.py`](../examples/model_factory.py): tiny PyTorch model factory.
-- [`examples/generate_samples.py`](../examples/generate_samples.py): tiny NumPy dataset generator.
-- [`examples/capture.json`](../examples/capture.json): JSON capture config.
-- [`examples/capture.toml`](../examples/capture.toml): TOML capture config.
+- [Example Smoke Workflow](EXAMPLE_SMOKE.md): run the bundled tiny model and dataset.
+- [`examples/README.md`](../examples/README.md): the files in the example folder.
 
-## Design And Architecture
+## Contribute
 
-- [Architecture](ARCHITECTURE.md)
-- [Domain Model](DOMAIN_MODEL.md)
-- [Capture Architecture](CAPTURE_ARCHITECTURE.md)
-- [TUI Design](TUI_DESIGN.md)
-- [TUI Components](TUI_COMPONENTS.md)
-- [Design Principles](DESIGN_PRINCIPLES.md)
-- [Design Language](DESIGN_LANGUAGE.md)
-- [Decisions](DECISIONS.md)
-
-## Maintainer Notes
-
-These files are useful for release work and project planning, but most users do not need them on day one.
-
-- [Release Checklist](RELEASE.md)
-- [PyPI Release Prep](PYPI_RELEASE.md)
-- [Clean Install Verification](CLEAN_INSTALL.md)
-- [Public Channel Smoke Test](PUBLIC_CHANNEL_SMOKE.md)
-- [Public Install 0.1.0a2 Gate](PUBLIC_INSTALL_A2_GATE.md)
-- [Final Build Validation](FINAL_BUILD_VALIDATION.md)
-- [Bigger-Model Release Audit](BIGGER_MODEL_RELEASE_AUDIT.md)
-- [TUI Smoke Test](TUI_SMOKE.md)
-- [TUI Release QA](TUI_RELEASE_QA.md)
-- [Testing Strategy](TESTING_STRATEGY.md)
-- [Roadmap](ROADMAP.md)
-- [Milestones](MILESTONES.md)
-- [Workflow Friction Audit](WORKFLOW_FRICTION_AUDIT.md)
-- [Product Spec](PRODUCT_SPEC.md)
-- [Vision](VISION.md)
-
-## Contributing
-
-See [Contributing](CONTRIBUTING.md).
+- [Architecture](ARCHITECTURE.md): how the codebase is organized.
+- [Contributing](CONTRIBUTING.md): development setup and quality checks.

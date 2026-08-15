@@ -1,80 +1,45 @@
 # Architecture
 
-Spelunk is a local-first, terminal-native IDE for learned representations.
+Spelunk is local-first. The CLI, TUI, and Python API all use the same service layer, so the backend can be tested without opening the terminal UI.
 
-The architecture separates model integration, activation capture, storage, statistics, diagnostics, application services, CLI, TUI, and future API clients. The backend must remain usable without the TUI.
-
-## Dependency Direction
-
-```text
-CLI / TUI / future clients
-    -> application services
-        -> diagnostics / analysis / capture / storage
-            -> domain models
-
-capture
-    -> framework adapter interfaces
-
-adapters/pytorch
-    -> capture interfaces + domain descriptions
-```
-
-The TUI must not call PyTorch hooks, read raw activation files directly, or calculate diagnostics. It consumes typed objects such as `DiagnosticResult`, `FeatureSummary`, `LayerSummary`, `RunComparison`, and `CaptureProgress`.
-
-## Packages
+## Main Packages
 
 ```text
 src/spelunk/
-  domain/        Pure typed domain objects.
-  services/      Application use cases shared by CLI, TUI, and API.
-  capture/       Framework-neutral activation capture pipeline.
-  adapters/      Framework-specific integration.
-  storage/       Local manifests and activation array persistence.
-  analysis/      Statistics, reducers, summaries.
-  diagnostics/   Built-in diagnostic checks and registry.
-  cli/           Typer command surface.
-  tui/           Textual application and widgets.
-  api/           Future API boundary over services.
-  config/        Settings and project/user config loading.
+  cli/           Typer command line interface
+  tui/           Textual terminal interface
+  api/           public Python helpers
+  services/      scan, capture, compare, report, and inspect workflows
+  capture/       dataset loading and capture pipeline objects
+  adapters/      framework-specific model integration, currently PyTorch
+  storage/       local manifests and activation persistence
+  analysis/      statistics over captured activations
+  diagnostics/   activation health checks
+  domain/        typed data objects shared across the project
+  config/        capture configs and recent-run history
 ```
 
-## Forbidden Imports
-
-- `domain` must not import Textual, Typer, Rich, PyTorch, or storage implementations.
-- `analysis` and `diagnostics` must not depend on Textual or Typer.
-- `tui` must not import `torch`.
-- PyTorch-specific concepts must stay under `spelunk/adapters/pytorch/` or the capture boundary.
-
-## Public Python API
-
-```python
-from spelunk import CapturePlan, Session
-
-session = Session.open("runs/run-001")
-scan = session.scan()
-report = session.report(format="markdown")
-
-session = Session.create("runs/run-002", model=model_ref, dataset=dataset_ref)
-plan = CapturePlan(layers=("encoder.*",), dataset="mnist-sample")
-capture = session.capture(plan)
-```
-
-PyTorch adapters are introduced behind the capture boundary in later milestones.
-
-## Local API Layer
-
-An API layer is in scope, but early milestones should expose an in-process Python API first. REST or RPC should be added only when the local product has stable service contracts.
-
-## Repository Layout
+## Dependency Shape
 
 ```text
-spelunk/
-  pyproject.toml
-  README.md
-  docs/
-  examples/
-  src/spelunk/
-  tests/
+CLI / TUI / Python API
+    -> services
+        -> capture / analysis / diagnostics / storage
+            -> domain
+
+adapters/pytorch
+    -> capture interfaces and domain descriptions
 ```
 
-Every milestone must leave the repository importable, testable, documented, and usable.
+The important rule is that UI code should not own analysis logic. For example, the TUI asks a `Session` to scan a run and then renders the returned `ScanResult`; it does not read activation shards or calculate diagnostics itself.
+
+## Boundaries Worth Keeping
+
+- `domain` should stay free of Typer, Textual, Rich, PyTorch, and storage implementations.
+- `diagnostics` and `analysis` should not depend on CLI or TUI code.
+- PyTorch-specific code should stay under `adapters/pytorch` or the capture boundary.
+- CLI and TUI commands should call services rather than duplicating workflow logic.
+
+## Run Data
+
+A capture writes a local `.spelunk` directory containing metadata, activation shards, diagnostics, statistics, and generated reports. See [Storage Format](STORAGE_FORMAT.md) for the on-disk layout.

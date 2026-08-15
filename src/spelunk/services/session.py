@@ -138,7 +138,7 @@ class Session:
     def capture(self, plan: CapturePlan) -> CaptureResult:
         raise UnsupportedOperationError(
             f"Capture is not implemented yet for dataset '{plan.dataset}'. "
-            "See M7 in docs/ROADMAP.md."
+            "Use the CLI capture workflow or the top-level spelunk.capture helper."
         )
 
     def compare(self, other: Session) -> ComparisonResult:

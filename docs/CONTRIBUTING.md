@@ -1,36 +1,37 @@
 # Contributing
 
-Spelunk is planned as a long-term software product, not a notebook or demo.
+Spelunk is still early, but contributions should keep the project easy to run, test, and understand.
 
-The public package is distributed as `spelunk-ml`. The installed command and Python import are both `spelunk`.
+## Setup
 
-## Engineering Rules
+```bash
+python -m pip install -e ".[dev,pytorch,arrays,datasets,tui]"
+```
 
-- Keep domain and analysis code independent from UI and framework adapters.
-- Prefer typed domain objects over dictionaries.
-- Keep PyTorch-specific code under `spelunk/adapters/pytorch/` and the capture boundary.
-- Keep CLI and TUI logic thin.
-- Use application services for product workflows.
-- Every milestone must include tests and documentation.
-- Coordinate remote and release changes with the project owner.
+## Checks
 
-## Quality Bar
+Run these before opening a pull request:
 
-Before a change is complete:
+```bash
+python -m pytest
+python -m ruff check .
+python -m mypy
+```
 
-- tests pass
-- types pass where configured
-- docs reflect changed behavior
-- examples still work
-- no unrelated refactors are included
+For docs-only changes, at least run the focused tests that touch examples or imports:
 
-## Documentation
+```bash
+python -m pytest tests/test_examples.py tests/test_package_import.py
+```
 
-Keep user-facing docs clear enough for someone who has never seen the repository before:
+## Code Guidelines
 
-- update `README.md` when install, quickstart, or major workflows change
-- update `docs/GETTING_STARTED.md` and `docs/CLI_REFERENCE.md` when commands change
-- keep release/audit notes in maintainer docs, not in the first-run path
-- record meaningful architecture decisions in `DECISIONS.md`
+- Keep CLI and TUI code thin; put workflow logic in `services/`.
+- Keep PyTorch-specific behavior in `adapters/pytorch/` or capture code.
+- Keep domain objects independent from UI and framework libraries.
+- Prefer small tests with temporary data over tests that depend on local files.
+- Update docs when command behavior, output, or public APIs change.
 
-Record unresolved choices instead of silently choosing arbitrary defaults.
+## Public Docs
+
+Write docs for someone seeing the repository for the first time. Prefer short examples, direct explanations, and real commands over design notes or planning language.
