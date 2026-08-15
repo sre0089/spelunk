@@ -16,6 +16,7 @@ Run these before opening a pull request:
 python -m pytest
 python -m ruff check .
 python -m mypy
+scripts/privacy_scan.sh
 ```
 
 For docs-only changes, at least run the focused tests that touch examples or imports:

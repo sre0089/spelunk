@@ -6,11 +6,7 @@ Spelunk is a local-first developer tool. It loads user-provided Python model fac
 
 Please do not open public issues for security-sensitive reports.
 
-Email:
-
-```text
-sarthakengala@gmail.com
-```
+Use GitHub private vulnerability reporting if it is available on the repository. If not, contact the maintainer through the GitHub profile linked from the project.
 
 Include:
 
