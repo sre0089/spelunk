@@ -1,32 +1,46 @@
 # Spelunk
 
-Spelunk is a terminal-native tool for inspecting learned representations. It captures PyTorch activations, stores them locally, computes layer and feature statistics, runs activation health diagnostics, compares runs, and opens everything in a TUI built for fast inspection.
+Spelunk is a terminal tool for inspecting what PyTorch models are doing internally.
+It captures activations from selected layers, stores them in a local `.spelunk` run, runs a few sanity checks, and lets you inspect the results from the CLI or a TUI.
 
-Install the package named `spelunk-ml`; use the command and Python import named `spelunk`.
+It is built for people who train or debug neural networks and want a faster path from “the model ran” to “I can see what changed inside it.”
+
+## Install
+
+The package name is `spelunk-ml`. The command and Python import are both `spelunk`.
 
 ```bash
-python -m pip install spelunk-ml
+python -m pip install "spelunk-ml[pytorch,arrays,datasets]"
 ```
+
+Homebrew is also supported:
 
 ```bash
 brew install sre0089/spelunk/spelunk-ml
 ```
 
+Check the install:
+
+```bash
+spelunk --version
+spelunk doctor
+```
+
 ## Quickstart
 
-Create a tiny dataset and model from the examples:
+Generate the bundled tiny dataset:
 
 ```bash
 python examples/generate_samples.py
 ```
 
-Discover captureable PyTorch layer names:
+List captureable layers from the example model:
 
 ```bash
 spelunk layers --model-path examples/model_factory.py --factory build_model
 ```
 
-Run capture, scan, and report generation in one command:
+Capture activations, scan the run, and write reports:
 
 ```bash
 spelunk quickstart \
@@ -36,8 +50,6 @@ spelunk quickstart \
   --dataset examples/samples.npy \
   --layers encoder
 ```
-
-To load trained weights before capture, add `--checkpoint-path weights.pt`.
 
 Open the TUI:
 
@@ -51,104 +63,65 @@ Useful TUI shortcuts:
 i   inspect a feature
 c   compare with another recent run
 r   generate and preview reports
-?   shortcuts
+?   show shortcuts
 q   quit
 ```
 
-## What You Can Do
+## Use Your Own Model
 
-- Discover valid PyTorch layer selectors before capture.
-- Capture activations from CLI flags, JSON/TOML configs, or Python, including saved PyTorch checkpoints.
-- Store activations as NumPy shards or Zarr.
-- Scan runs for layer statistics and activation health diagnostics.
-- Inspect feature statistics and top examples.
-- Compare runs and see metric deltas.
-- Generate Markdown and JSON reports.
-- Browse runs, reports, comparisons, and diagnostics in the TUI.
+Spelunk loads models through a small Python factory function:
 
-## Common Workflows
+```python
+# model_factory.py
+import torch
 
-Capture directly from flags:
+
+def build_model() -> torch.nn.Module:
+    return torch.nn.Sequential(...)
+```
+
+Then run:
 
 ```bash
-spelunk capture \
+spelunk quickstart \
   --run runs/experiment.spelunk \
   --model-path model_factory.py \
-  --checkpoint-path weights.pt \
+  --factory build_model \
   --dataset samples.npy \
   --layers encoder \
   --layers bottleneck
 ```
 
-Create a reproducible config:
+If your weights are saved separately, add:
 
 ```bash
-spelunk init \
-  --output spelunk.json \
-  --run runs/experiment.spelunk \
-  --model-path model_factory.py \
-  --dataset samples.npy \
-  --layers encoder
-
-spelunk capture spelunk.json
+--checkpoint-path weights.pt
 ```
 
-Inspect from the CLI:
+## What Spelunk Shows
 
-```bash
-spelunk scan runs/experiment.spelunk
-spelunk inspect runs/experiment.spelunk --layer encoder --feature 0
-spelunk report runs/experiment.spelunk --format markdown
-```
+- layer statistics such as activation mean, standard deviation, min, and max
+- activation health diagnostics for sparsity, dead features, saturation, and outliers
+- feature-level statistics and top examples
+- Markdown and JSON reports
+- metric deltas between two captured runs
+- a local TUI for browsing runs, diagnostics, reports, and comparisons
 
-Capture from Python:
+## Current Scope
 
-```python
-import numpy as np
-import spelunk
+Spelunk is an early local-first tool. It currently focuses on PyTorch models, local datasets, local run folders, and terminal workflows. It does not require a server, hosted storage, or notebook integration.
 
-samples = np.load("samples.npy")
-
-result = spelunk.capture(
-    model=model,
-    dataset=samples,
-    layers=["encoder", "bottleneck"],
-    run="runs/experiment.spelunk",
-)
-```
-
-## Requirements
-
-- Python 3.11+
-- PyTorch for activation capture
-- NumPy for NumPy datasets and local array statistics
-
-Install optional capture dependencies with pip when needed:
-
-```bash
-python -m pip install "spelunk-ml[pytorch,arrays,datasets]"
-```
-
-## Status
-
-Spelunk is a pre-alpha release. It is useful for local activation capture and inspection, but some workflows are intentionally early:
-
-- Capture currently expects a local Python model factory returning a `torch.nn.Module`.
-- Checkpoint file loading supports PyTorch state dicts and common checkpoint wrappers.
-- Diagnostics focus on activation health, including sparsity, dead features, saturation, and outliers.
-- TUI inspect and compare shortcuts open native prompts for choosing features and comparison runs.
+The main rough edge is that you need to provide a Python model factory and choose the layers you want to capture. Use `spelunk layers` first if you are unsure what the layer names are.
 
 ## Documentation
 
-- [Documentation Index](docs/README.md)
-- [Install](docs/INSTALL.md)
 - [Getting Started](docs/GETTING_STARTED.md)
+- [Install](docs/INSTALL.md)
 - [CLI Reference](docs/CLI_REFERENCE.md)
 - [Capture Configs](docs/CAPTURE_CONFIG.md)
 - [Diagnostics](docs/DIAGNOSTICS.md)
 - [Python API](docs/PYTHON_API.md)
 - [Storage Format](docs/STORAGE_FORMAT.md)
-- [Architecture](docs/ARCHITECTURE.md)
 - [Contributing](docs/CONTRIBUTING.md)
 - [Support](SUPPORT.md)
 - [Security](SECURITY.md)
@@ -156,7 +129,7 @@ Spelunk is a pre-alpha release. It is useful for local activation capture and in
 ## Development
 
 ```bash
-python -m pip install -e ".[dev,arrays,datasets,tui]"
+python -m pip install -e ".[dev,pytorch,arrays,datasets,tui]"
 python -m pytest
 python -m ruff check .
 python -m mypy
