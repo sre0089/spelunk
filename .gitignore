@@ -11,3 +11,14 @@ htmlcov/
 .coverage
 .DS_Store
 .internal/
+
+# Local Spelunk runs and generated example data
+runs/
+*.spelunk/
+examples/samples.npy
+
+# Local model weights/checkpoints
+*.pt
+*.pth
+*.ckpt
+*.safetensors
